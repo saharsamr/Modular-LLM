@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     wandb.login()
     os.environ["WANDB_PROJECT"] = "Modular-LLM"
-
+    wandb.config.update(dict(vars(args)), allow_val_change=True)
 
     training_arguments = TrainingArguments(
         output_dir=args.output_dir,
