@@ -5,6 +5,7 @@ def arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--cluster_idx", type=str, required=True) # The index of cluster that we want to train
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--epochs", type=int, required=True)
     parser.add_argument("--rank", type=int, required=True)
