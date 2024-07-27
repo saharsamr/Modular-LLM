@@ -58,8 +58,6 @@ class LoraModuleTrainer:
         self.model = get_peft_model(self.base_model, self.lora_config)
         """
 
-        MODEL_ID = "LoftQ/phi-2-4bit-64rank"
-
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name, 
             torch_dtype=torch.float32,  # you may change it with different models
