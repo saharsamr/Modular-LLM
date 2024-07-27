@@ -17,11 +17,12 @@ class LoraModuleTrainer:
     def __init__(
             self,
             base_model_name,
-            lora_rank, lora_alpha
+            lora_rank, lora_alpha, lora_dropout,
     ):
         self.model_name = base_model_name
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
+        self.lora_dropout = lora_dropout
 
         # TODO: check if the tokenizer needs any special config or alternation
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name, use_fast=True)
@@ -44,7 +45,7 @@ class LoraModuleTrainer:
             loftq_config=self.loftq_config,
             target_modules='all-linear',  # TODO: what are the target modules exactly?
             modules_to_save=['lm_head', 'embed_tokens'],  # TODO: what other modules should be trainable?
-            lora_dropout=0.1,
+            lora_dropout=self.lora_dropout,
             bias='none',
             task_type='CAUSAL_LM'
         )
