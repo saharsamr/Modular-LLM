@@ -8,7 +8,7 @@ def arg_parser():
     parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=str, required=True)  # The index of cluster that we want to train
-    parser.add_argument("--output_dir", type=str, required=True, default='./results')
+    parser.add_argument("--output_dir", type=str, default='./results')
     parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--rank", type=int, default=4)
     parser.add_argument("--lora_alpha", type=float, default=16)
