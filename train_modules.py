@@ -43,7 +43,7 @@ if __name__ == "__main__":
         weight_decay=args.weight_decay,
         optim=args.optimizer,
         lr_scheduler_type=args.scheduler,
-        warmup_ratio=args.warmup_ration,
+        warmup_ratio=args.warmup_ratio,
         group_by_length=True,
         save_steps=args.save_every,
         logging_steps=args.log_every,
