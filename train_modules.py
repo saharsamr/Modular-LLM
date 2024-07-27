@@ -29,15 +29,12 @@ if __name__ == "__main__":
     # run_name = args.model_name + '_' + str(args.cluster_idx)
     # wandb.init(project=args.project_name, name=run_name)
     # wandb.config.update(dict(vars(args)), allow_val_change=True)
-    
-    # Creating train_data and eval_data
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx)
 
     training_arguments = TrainingArguments(
         output_dir=args.output_dir,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=args.batch_size,
+        per_device_eval_batch_size=16,
         gradient_accumulation_steps=args.gradient_accumulation,
         gradient_checkpointing=True,
         learning_rate=args.lr,
@@ -45,7 +42,7 @@ if __name__ == "__main__":
         optim=args.optimizer,
         lr_scheduler_type=args.scheduler,
         warmup_ratio=args.warmup_ratio,
-        group_by_length=True,
+        group_by_length=False,
         save_steps=args.save_every,
         logging_steps=args.log_every,
         do_eval=True,
@@ -61,6 +58,10 @@ if __name__ == "__main__":
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
     )
+
+    # Creating train_data and eval_data
+    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, module_trainer.tokenizer)
+
     module_trainer.train(
         train_data=train_data, 
         eval_data=eval_data,  

@@ -4,7 +4,7 @@ import argparse
 def arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default='microsoft/phi-2')
+    parser.add_argument("--model_name", type=str, default="LoftQ/phi-2-4bit-64rank")
     parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
@@ -15,7 +15,7 @@ def arg_parser():
     parser.add_argument("--lora_dropout", type=float, default=0.05)
     parser.add_argument("--continue_from", type=str, default=None)
     parser.add_argument("--batch_size", type=int, required=True)
-    parser.add_argument("--gradient_accumulation", type=int, default=1)
+    parser.add_argument("--gradient_accumulation", type=int, default=16)
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--optimizer", default="paged_adamw_32bit")
     parser.add_argument("--lr", type=float, default=1e-4)

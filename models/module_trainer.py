@@ -8,7 +8,8 @@ from transformers import (
 from peft import (
     get_peft_model,
     LoraConfig,
-    LoftQConfig
+    LoftQConfig,
+    PeftModel
 )
 
 
@@ -27,18 +28,22 @@ class LoraModuleTrainer:
         # TODO: check if the tokenizer needs any special config or alternation
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name, use_fast=True)
         self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+
         # TODO: if we are going to use any other type of quantization, this should be parametrized
+        """
         self.bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float32,  # TODO: what dtype?
             bnb_4bit_use_double_quant=False,
         )
+        
         self.base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
             torch_dtype=torch.float32,  # TODO: what dtype?
             quantization_config=self.bnb_config
         )
+        
         self.loftq_config = LoftQConfig(loftq_bits=4)
         self.lora_config = LoraConfig(
             r=lora_rank,
@@ -51,14 +56,34 @@ class LoraModuleTrainer:
             task_type='CAUSAL_LM'
         )
         self.model = get_peft_model(self.base_model, self.lora_config)
+        """
+
+        MODEL_ID = "LoftQ/phi-2-4bit-64rank"
+
+        base_model = AutoModelForCausalLM.from_pretrained(
+            base_model_name, 
+            torch_dtype=torch.float32,  # you may change it with different models
+            quantization_config=BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float32,  # float32 is tested and veryfied
+                bnb_4bit_use_double_quant=False,
+                bnb_4bit_quant_type='nf4',
+            ),
+        )
+
+        # In case of using gradient_checkpoint = True, the below line should be used:
+        base_model.enable_input_require_grads()
+
+        self.model = PeftModel.from_pretrained(
+                            base_model,
+                            base_model_name,
+                            subfolder="loftq_init",
+                            is_trainable=True,
+                            )
+        
+
 
     def train(self, train_data, eval_data, training_args):
-        train_data = train_data.map(
-            lambda samples: self.tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True, batch_size=64)
-        eval_data = eval_data.map(
-            lambda samples: self.tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True, batch_size=64)
 
         trainer = Trainer(
             model=self.model,

@@ -3,7 +3,7 @@ import pyarrow.dataset as pds
 import pyarrow.compute as pc
 
 
-def read_dataset(ds_name, cluster_idx):
+def read_dataset(ds_name, cluster_idx, tokenizer):
     """
     Returns the samples in the dataset based on the value of cluster_idx.
     (it is done inplace to not filling up the ram)
@@ -37,9 +37,21 @@ def read_dataset(ds_name, cluster_idx):
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
 
     # Selecting the training rows
-    train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
+    train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')['train']
+
+    # Tokenise the train data
+    train_ds = train_ds.map(
+            lambda samples: tokenizer(
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), 
+            batched=True, batch_size=64)
 
     # Selecting the validation rows
-    val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')
+    val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')['train']
 
-    return train_ds['train'], val_ds['train']
+    # Tokenise the test data
+    val_ds = val_ds.map(
+            lambda samples: tokenizer(
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), 
+            batched=True, batch_size=64)
+
+    return train_ds, val_ds
