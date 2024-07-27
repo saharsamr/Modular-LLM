@@ -24,10 +24,11 @@ def set_seed(seed: int):
 if __name__ == "__main__":
     args = arg_parser()
     set_seed(args.seed)
+    os.environ["WANDB_DISABLED"] = "true"
 
-    run_name = args.model_name + '_' + str(args.cluster_idx)
-    wandb.init(project=args.project_name, name=run_name)
-    wandb.config.update(dict(vars(args)), allow_val_change=True)
+    # run_name = args.model_name + '_' + str(args.cluster_idx)
+    # wandb.init(project=args.project_name, name=run_name)
+    # wandb.config.update(dict(vars(args)), allow_val_change=True)
     
     # Creating train_data and eval_data
     train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx)
@@ -47,8 +48,11 @@ if __name__ == "__main__":
         group_by_length=True,
         save_steps=args.save_every,
         logging_steps=args.log_every,
-        report_to="wandb",
-        run_name=run_name,  # TODO: Might be changed.
+        do_eval=True,
+        evaluation_strategy="steps",
+        eval_steps=args.eval_every,
+        # report_to="wandb",
+        # run_name=run_name,  # TODO: Might be changed.
     )
 
     module_trainer = LoraModuleTrainer(
