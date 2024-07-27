@@ -55,10 +55,10 @@ class LoraModuleTrainer:
     def train(self, train_data, eval_data, training_args):
         train_data = train_data.map(
             lambda samples: self.tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True)
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True, batch_size=64)
         eval_data = eval_data.map(
             lambda samples: self.tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True)
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True, batch_size=64)
 
         trainer = Trainer(
             model=self.model,
