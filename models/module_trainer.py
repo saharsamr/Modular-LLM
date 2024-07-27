@@ -78,7 +78,9 @@ class LoraModuleTrainer:
                             subfolder="loftq_init",
                             is_trainable=True,
                             )
-        
+
+        self.model.print_trainable_parameters()
+
 
 
     def train(self, train_data, eval_data, training_args):
