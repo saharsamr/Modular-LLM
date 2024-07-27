@@ -15,7 +15,7 @@ def arg_parser():
     parser.add_argument("--lora_dropout", type=float, default=0.05)
     parser.add_argument("--continue_from", type=str, default=None)
     parser.add_argument("--batch_size", type=int, required=True)
-    parser.add_argument("--gradient_accumulation", type=int, default=None)
+    parser.add_argument("--gradient_accumulation", type=int, default=1)
     parser.add_argument("--max_length", type=int, default=256)
     parser.add_argument("--optimizer", default="paged_adamw_32bit")
     parser.add_argument("--lr", type=float, default=1e-4)
