@@ -47,7 +47,7 @@ if __name__ == "__main__":
         logging_steps=args.log_every,
         do_eval=True,
         eval_strategy="steps",
-        evaluation_steps=args.eval_every,
+        eval_steps=args.eval_every,
         # report_to="wandb",
         # run_name=run_name,  # TODO: Might be changed.
     )
