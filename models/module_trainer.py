@@ -26,6 +26,7 @@ class LoraModuleTrainer:
 
         # TODO: check if the tokenizer needs any special config or alternation
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name, use_fast=True)
+        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         # TODO: if we are going to use any other type of quantization, this should be parametrized
         self.bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -52,6 +53,13 @@ class LoraModuleTrainer:
         self.model = get_peft_model(self.base_model, self.lora_config)
 
     def train(self, train_data, eval_data, training_args):
+        train_data = train_data.map(
+            lambda samples: self.tokenizer(
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True)
+        eval_data = eval_data.map(
+            lambda samples: self.tokenizer(
+                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), batched=True)
+
         trainer = Trainer(
             model=self.model,
             tokenizer=self.tokenizer,
@@ -60,4 +68,5 @@ class LoraModuleTrainer:
             train_dataset=train_data,
             eval_dataset=eval_data
         )
+
         trainer.train()

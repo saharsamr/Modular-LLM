@@ -48,7 +48,6 @@ if __name__ == "__main__":
         save_steps=args.save_every,
         logging_steps=args.log_every,
         report_to="wandb",
-        remove_unused_columns=False,
         run_name=run_name,  # TODO: Might be changed.
     )
 
