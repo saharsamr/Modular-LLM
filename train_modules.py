@@ -25,8 +25,7 @@ if __name__ == "__main__":
     args = arg_parser()
     set_seed(args.seed)
 
-    wandb.login()
-    os.environ["WANDB_PROJECT"] = args.project_name
+    wandb.init(project=args.project_name, name=args.model_name + '_' + args.cluster_idx)
     wandb.config.update(dict(vars(args)), allow_val_change=True)
     
     # Creating train_data and eval_data
