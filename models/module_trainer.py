@@ -80,6 +80,7 @@ class LoraModuleTrainer:
                             )
 
         self.model.print_trainable_parameters()
+        self.model.config.use_cache = False
 
 
 
