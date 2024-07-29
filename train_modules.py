@@ -24,7 +24,8 @@ def set_seed(seed: int):
 if __name__ == "__main__":
     args = arg_parser()
     set_seed(args.seed)
-    os.environ["WANDB_DISABLED"] = "true"
+    # os.environ["WANDB_DISABLED"] = "true"
+
 
     # run_name = args.model_name + '_' + str(args.cluster_idx)
     # wandb.init(project=args.project_name, name=run_name)
@@ -48,7 +49,7 @@ if __name__ == "__main__":
         do_eval=True,
         eval_strategy="steps",
         eval_steps=args.eval_every,
-        # report_to="wandb",
+        report_to="wandb",
         # run_name=run_name,  # TODO: Might be changed.
     )
 
