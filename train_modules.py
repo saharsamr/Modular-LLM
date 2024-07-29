@@ -24,12 +24,10 @@ def set_seed(seed: int):
 if __name__ == "__main__":
     args = arg_parser()
     set_seed(args.seed)
-    # os.environ["WANDB_DISABLED"] = "true"
 
-
-    # run_name = args.model_name + '_' + str(args.cluster_idx)
-    # wandb.init(project=args.project_name, name=run_name)
-    # wandb.config.update(dict(vars(args)), allow_val_change=True)
+    run_name = 'cluster' + str(args.cluster_idx) + 'batch' + str(args.batch_size)
+    wandb.init(project=args.project_name, name=run_name)
+    wandb.config.update(dict(vars(args)), allow_val_change=True)
 
     training_arguments = TrainingArguments(
         output_dir=args.output_dir,
@@ -37,7 +35,7 @@ if __name__ == "__main__":
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=16,
         gradient_accumulation_steps=args.gradient_accumulation,
-        gradient_checkpointing=True,
+        gradient_checkpointing=False,
         learning_rate=args.lr,
         weight_decay=args.weight_decay,
         optim=args.optimizer,
@@ -50,7 +48,7 @@ if __name__ == "__main__":
         eval_strategy="steps",
         eval_steps=args.eval_every,
         report_to="wandb",
-        # run_name=run_name,  # TODO: Might be changed.
+        run_name=run_name,  # TODO: Might be changed.
     )
 
     module_trainer = LoraModuleTrainer(
@@ -58,10 +56,12 @@ if __name__ == "__main__":
         lora_rank=args.rank,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
+        max_length=args.max_length
     )
 
     # Creating train_data and eval_data
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, module_trainer.tokenizer)
+    train_data, eval_data = read_dataset(
+        args.dataset_name, args.cluster_idx, module_trainer.tokenizer)
 
     module_trainer.train(
         train_data=train_data, 
