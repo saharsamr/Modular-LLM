@@ -3,7 +3,6 @@ from transformers import (
     AutoModelForCausalLM,
     BitsAndBytesConfig,
     AutoTokenizer,
-    Trainer,
 )
 from peft import (
     get_peft_model,
@@ -11,6 +10,10 @@ from peft import (
     LoftQConfig,
     PeftModel
 )
+
+from trl import SFTTrainer
+
+from data_handler.dataset import formatting_prompts_func
 
 
 class LoraModuleTrainer:
@@ -82,16 +85,19 @@ class LoraModuleTrainer:
         self.model.config.use_cache = False
 
 
+    def train(self, train_data, eval_data, training_args, collator):
 
-    def train(self, train_data, eval_data, training_args):
-
-        trainer = Trainer(
-            model=self.model,
-            tokenizer=self.tokenizer,
-            args=training_args,
-            # data_collator=data_collator,  # TODO: define data-collator
-            train_dataset=train_data,
-            eval_dataset=eval_data
-        )
-
+        trainer = SFTTrainer(
+                        model=self.model,
+                        train_dataset=train_data,
+                        eval_dataset=eval_data,
+                        # peft_config=peft_config,
+                        formatting_func=formatting_prompts_func,
+                        collator=collator,
+                        dataset_text_field="text",
+                        max_seq_length=690,
+                        tokenizer=self.tokenizer,
+                        args=training_args,
+                    )
+        
         trainer.train()

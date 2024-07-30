@@ -4,3 +4,4 @@ torch
 peft
 wandb
 bitsandbytes
+trl

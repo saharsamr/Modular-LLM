@@ -1,9 +1,10 @@
 from datasets import load_dataset
 import pyarrow.dataset as pds
 import pyarrow.compute as pc
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
 
-def read_dataset(ds_name, cluster_idx, tokenizer):
+def read_dataset(ds_name, cluster_idx):
     """
     Returns the samples in the dataset based on the value of cluster_idx.
     (it is done inplace to not filling up the ram)
@@ -39,19 +40,21 @@ def read_dataset(ds_name, cluster_idx, tokenizer):
     # Selecting the training rows
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')['train']
 
-    # Tokenise the train data
-    train_ds = train_ds.map(
-            lambda samples: tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), 
-            batched=True, batch_size=64)
-
     # Selecting the validation rows
     val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')['train']
 
-    # Tokenise the test data
-    val_ds = val_ds.map(
-            lambda samples: tokenizer(
-                text=samples['source'], text_target=samples['target'], padding='max_length', truncation=True), 
-            batched=True, batch_size=64)
-
     return train_ds, val_ds
+
+
+def formatting_prompts_func(example):
+    output_texts = []
+    for i in range(len(example['source'])):
+        text = f"### Instruction: {example['source'][i]}\n ### Response: {example['target'][i]}"
+        output_texts.append(text)
+    return output_texts
+
+
+def get_data_collator(tokenizer):
+    response_template = " ### Response:"
+    collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
+    return collator

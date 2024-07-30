@@ -5,13 +5,12 @@ import wandb
 import numpy as np
 import torch
 from transformers import (
-    TrainingArguments,
-    DataCollatorForLanguageModeling,
+    TrainingArguments
 )
 
 from utils.arg_parser import arg_parser
 from models.module_trainer import LoraModuleTrainer
-from data_handler.dataset import read_dataset
+from data_handler.dataset import read_dataset, get_data_collator
 
 
 def set_seed(seed: int):
@@ -60,11 +59,13 @@ if __name__ == "__main__":
     )
 
     # Creating train_data and eval_data
-    train_data, eval_data = read_dataset(
-        args.dataset_name, args.cluster_idx, module_trainer.tokenizer)
-
+    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx)
+    
+    data_collator = get_data_collator(module_trainer.tokenizer)
+    
     module_trainer.train(
         train_data=train_data, 
         eval_data=eval_data,  
         training_args=training_arguments,
+        collator=data_collator
     )
