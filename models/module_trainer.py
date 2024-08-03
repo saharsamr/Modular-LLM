@@ -52,7 +52,7 @@ class LoraModuleTrainer:
             r=lora_rank,
             lora_alpha=lora_alpha,
             loftq_config=self.loftq_config,
-            target_modules='all-linear',  # TODO: what are the target modules exactly?
+            target_modules=['Wqkv','out_proj'],  # TODO: what are the target modules exactly?
             modules_to_save=['embed_tokens'],  # TODO: what other modules should be trainable?
             lora_dropout=self.lora_dropout,
             bias='none',
@@ -93,9 +93,8 @@ class LoraModuleTrainer:
                         eval_dataset=eval_data,
                         # peft_config=peft_config,
                         formatting_func=formatting_prompts_func,
-                        collator=collator,
-                        dataset_text_field="text",
-                        max_seq_length=690,
+                        data_collator=collator,
+                        max_seq_length=2048,
                         tokenizer=self.tokenizer,
                         args=training_args,
                     )
