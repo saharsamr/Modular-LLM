@@ -40,10 +40,10 @@ def read_dataset(ds_name, cluster_idx):
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
 
     # Selecting the training rows
-    train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')['train']
+    train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
 
     # Selecting the validation rows
-    val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')['train']
+    val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')
 
     return train_ds, val_ds
 
