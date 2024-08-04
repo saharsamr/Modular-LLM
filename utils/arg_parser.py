@@ -16,7 +16,7 @@ def arg_parser():
     parser.add_argument("--continue_from", type=str, default=None)
     parser.add_argument("--batch_size", type=int, required=True)
     parser.add_argument("--gradient_accumulation", type=int, default=8)
-    parser.add_argument("--max_length", type=int, default=1024)
+    parser.add_argument("--max_length", type=int, default=2048)
     parser.add_argument("--optimizer", default="paged_adamw_8bit")
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--scheduler", type=str, default="cosine", choices=["linear", "cosine", "cosine_restarts"])

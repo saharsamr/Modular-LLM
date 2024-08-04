@@ -13,8 +13,6 @@ from peft import (
 
 from trl import SFTTrainer
 
-from data_handler.dataset import formatting_prompts_func
-
 
 class LoraModuleTrainer:
 
@@ -22,12 +20,14 @@ class LoraModuleTrainer:
             self,
             base_model_name,
             lora_rank, lora_alpha, lora_dropout,
-            max_length
+            max_length, formatting_func
     ):
         self.model_name = base_model_name
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.lora_dropout = lora_dropout
+        self.formatting_func = formatting_func
+        self.max_length = max_length
 
         # TODO: check if the tokenizer needs any special config or alternation
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name, use_fast=True, model_max_length=max_length)
@@ -84,19 +84,16 @@ class LoraModuleTrainer:
         self.model.print_trainable_parameters()
         self.model.config.use_cache = False
 
-
     def train(self, train_data, eval_data, training_args, collator):
-
         trainer = SFTTrainer(
                         model=self.model,
                         train_dataset=train_data,
                         eval_dataset=eval_data,
                         # peft_config=peft_config,
-                        formatting_func=formatting_prompts_func,
+                        formatting_func=self.formatting_func,
                         data_collator=collator,
-                        max_seq_length=2048,
+                        max_seq_length=self.max_length,
                         tokenizer=self.tokenizer,
                         args=training_args,
                     )
-        
         trainer.train()

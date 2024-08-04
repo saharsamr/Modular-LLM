@@ -3,6 +3,8 @@ import pyarrow.dataset as pds
 import pyarrow.compute as pc
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 
+from utils.config import *
+
 
 def read_dataset(ds_name, cluster_idx):
     """
@@ -49,7 +51,8 @@ def read_dataset(ds_name, cluster_idx):
 def formatting_prompts_func(example):
     output_texts = []
     for i in range(len(example['source'])):
-        text = f"### Instruction: {example['source'][i]}\n ### Response: {example['target'][i]}"
+        max_source_length = (MAX_LENGTH - len(example['target'].split())) / AVG_WORD_TOKEN
+        text = f"### Instruction: {example['source'][i][:max_source_length]}\n ### Response: {example['target'][i]}"
         output_texts.append(text)
     return output_texts
 

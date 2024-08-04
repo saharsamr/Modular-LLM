@@ -10,7 +10,7 @@ from transformers import (
 
 from utils.arg_parser import arg_parser
 from models.module_trainer import LoraModuleTrainer
-from data_handler.dataset import read_dataset, get_data_collator
+from data_handler.dataset import read_dataset, get_data_collator, formatting_prompts_func
 
 
 def set_seed(seed: int):
@@ -55,7 +55,8 @@ if __name__ == "__main__":
         lora_rank=args.rank,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
-        max_length=args.max_length
+        max_length=args.max_length,
+        formatting_func=formatting_prompts_func
     )
 
     # Creating train_data and eval_data
