@@ -51,7 +51,7 @@ def read_dataset(ds_name, cluster_idx):
 def formatting_prompts_func(example):
     output_texts = []
     for i in range(len(example['source'])):
-        max_source_length = (MAX_LENGTH - len(example['target'][i].split())) / AVG_WORD_TOKEN
+        max_source_length = int((MAX_LENGTH - len(example['target'][i].split())) / AVG_WORD_TOKEN)
         text = f"### Instruction: {example['source'][i][:max_source_length]}\n ### Response: {example['target'][i]}"
         output_texts.append(text)
     return output_texts
