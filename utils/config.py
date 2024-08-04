@@ -1,2 +1,6 @@
 AVG_WORD_TOKEN = 1.45
 MAX_LENGTH = 2048
+
+LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "dense"]
+OTHER_TRAINABLE_MODULES = ["embed_tokens"]
+TASK_TYPE = "CAUSAL_LM"

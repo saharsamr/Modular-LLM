@@ -10,8 +10,9 @@ from peft import (
     LoftQConfig,
     PeftModel
 )
-
 from trl import SFTTrainer
+
+from utils.config import *
 
 
 class LoraModuleTrainer:
@@ -52,11 +53,11 @@ class LoraModuleTrainer:
             r=lora_rank,
             lora_alpha=lora_alpha,
             loftq_config=self.loftq_config,
-            target_modules=['Wqkv','out_proj'],  # TODO: what are the target modules exactly?
-            modules_to_save=['embed_tokens'],  # TODO: what other modules should be trainable?
+            target_modules=LORA_TARGET_MODULES,  # TODO: what are the target modules exactly?
+            modules_to_save=OTHER_TRAINABLE_MODULES,  # TODO: what other modules should be trainable?
             lora_dropout=self.lora_dropout,
             bias='none',
-            task_type='CAUSAL_LM'
+            task_type=TASK_TYPE
         )
         self.model = get_peft_model(self.base_model, self.lora_config)
 
