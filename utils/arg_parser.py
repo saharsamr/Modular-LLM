@@ -29,5 +29,6 @@ def arg_parser():
     parser.add_argument("--save_dir", type=str, default='./checkpoints')
     parser.add_argument("--max_checkpoints", type=int, default=2)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--data_portion", type=float, default=1.0)
 
     return parser.parse_args()
