@@ -61,27 +61,6 @@ class LoraModuleTrainer:
         )
         self.model = get_peft_model(self.base_model, self.lora_config)
 
-        # base_model = AutoModelForCausalLM.from_pretrained(
-        #     base_model_name, 
-        #     torch_dtype=torch.float32,  # you may change it with different models
-        #     quantization_config=BitsAndBytesConfig(
-        #         load_in_4bit=True,
-        #         bnb_4bit_compute_dtype=torch.float32,  # float32 is tested and veryfied
-        #         bnb_4bit_use_double_quant=False,
-        #         bnb_4bit_quant_type='nf4',
-        #     ),
-        # )
-
-        # # In case of using gradient_checkpoint = True, the below line should be used:
-        # base_model.enable_input_require_grads()
-
-        # self.model = PeftModel.from_pretrained(
-        #                     base_model,
-        #                     base_model_name,
-        #                     subfolder="loftq_init",
-        #                     is_trainable=True,
-        #                     )
-
         self.model.print_trainable_parameters()
         self.model.config.use_cache = False
 
@@ -90,7 +69,6 @@ class LoraModuleTrainer:
                         model=self.model,
                         train_dataset=train_data,
                         eval_dataset=eval_data,
-                        # peft_config=peft_config,
                         formatting_func=self.formatting_func,
                         data_collator=collator,
                         max_seq_length=self.max_length,

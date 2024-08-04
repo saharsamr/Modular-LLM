@@ -34,7 +34,7 @@ def read_dataset(ds_name, cluster_idx):
         return filtered
 
     # Loading the whole dataset
-    ds = load_dataset(ds_name, cache_dir="../data/")
+    ds = load_dataset(ds_name, cache_dir="../data/", split="train[:20%")
 
     # Filtering the dataset based on the value of cluster_idx
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
