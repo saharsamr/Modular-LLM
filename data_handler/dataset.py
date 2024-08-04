@@ -41,11 +41,11 @@ def read_dataset(ds_name, cluster_idx, data_portion):
 
     # Selecting the training rows
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
-    train_ds, _ = train_ds.train_test_split(test_size=1-data_portion)
+    train_ds = train_ds.train_test_split(test_size=1-data_portion)['train']
 
     # Selecting the validation rows
     val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')
-    val_ds, _ = val_ds.train_test_split(test_size=1-data_portion)
+    val_ds = val_ds.train_test_split(test_size=1-data_portion)['train']
 
     return train_ds, val_ds
 
