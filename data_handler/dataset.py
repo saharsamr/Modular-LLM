@@ -6,7 +6,7 @@ from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from utils.config import *
 
 
-def read_dataset(ds_name, cluster_idx):
+def read_dataset(ds_name, cluster_idx, data_portion):
     """
     Returns the samples in the dataset based on the value of cluster_idx.
     (it is done inplace to not filling up the ram)
@@ -34,16 +34,18 @@ def read_dataset(ds_name, cluster_idx):
         return filtered
 
     # Loading the whole dataset
-    ds = load_dataset(ds_name, cache_dir="../data/", split="train[:20%]")
+    ds = load_dataset(ds_name, cache_dir="../data/", split="train")
 
     # Filtering the dataset based on the value of cluster_idx
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
 
     # Selecting the training rows
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
+    train_ds, _ = train_ds.train_test_split(test_size=1-data_portion)
 
     # Selecting the validation rows
     val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')
+    val_ds, _ = val_ds.train_test_split(test_size=1-data_portion)
 
     return train_ds, val_ds
 
