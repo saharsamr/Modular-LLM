@@ -24,12 +24,12 @@ if __name__ == "__main__":
     args = arg_parser()
     set_seed(args.seed)
 
-    run_name = 'cluster' + str(args.cluster_idx) + 'batch' + str(args.batch_size)
+    run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
     wandb.init(project=args.project_name, name=run_name)
     wandb.config.update(dict(vars(args)), allow_val_change=True)
 
     training_arguments = TrainingArguments(
-        output_dir=args.output_dir,
+        output_dir=args.output_dir + '/' + run_name,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=16,
@@ -48,6 +48,9 @@ if __name__ == "__main__":
         eval_steps=args.eval_every,
         report_to="wandb",
         run_name=run_name,  # TODO: Might be changed.
+        metric_for_best_model=args.metric_for_best_model,
+        load_best_model_at_end=args.load_best_model_at_end,
+        save_total_limit=args.save_total_limit
     )
 
     module_trainer = LoraModuleTrainer(
