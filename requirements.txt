@@ -5,3 +5,4 @@ peft
 wandb
 bitsandbytes
 trl
+evaluate

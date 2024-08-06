@@ -1,7 +1,7 @@
 import argparse
 
 
-def arg_parser():
+def train_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/phi-2")
@@ -35,3 +35,17 @@ def arg_parser():
     parser.add_argument("--save_total_limit", type=int, default=1)
 
     return parser.parse_args()
+
+
+def test_arg_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
+    parser.add_argument("--project_name", type=str, default='Modular-LLM')
+    parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
+    parser.add_argument("--data_portion", type=float, default=1.0)
+    parser.add_argument("--model_checkpoint_path", type=str, required=True)
+    parser.add_argument("--seed", type=int, default=1234)
+
+    return parser.parse_args()
+ 

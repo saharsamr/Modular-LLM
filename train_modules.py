@@ -8,7 +8,7 @@ from transformers import (
     TrainingArguments
 )
 
-from utils.arg_parser import arg_parser
+from utils.arg_parser import train_arg_parser
 from models.module_trainer import LoraModuleTrainer
 from data_handler.dataset import read_dataset, get_data_collator, formatting_prompts_func
 
@@ -21,7 +21,7 @@ def set_seed(seed: int):
 
 
 if __name__ == "__main__":
-    args = arg_parser()
+    args = train_arg_parser()
     set_seed(args.seed)
 
     run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     )
 
     # Creating train_data and eval_data
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion)
+    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
     
     data_collator = get_data_collator(module_trainer.tokenizer)
     

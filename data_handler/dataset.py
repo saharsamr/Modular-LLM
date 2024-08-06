@@ -6,7 +6,7 @@ from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 from utils.config import *
 
 
-def read_dataset(ds_name, cluster_idx, data_portion):
+def read_dataset(ds_name, cluster_idx, data_portion, return_test):
 
     """
     Returns the samples in the dataset based on the value of cluster_idx.
@@ -40,6 +40,15 @@ def read_dataset(ds_name, cluster_idx, data_portion):
     # Filtering the dataset based on the value of cluster_idx
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
 
+    # If we only need test_dataset for testing script
+    if return_test:
+        test_ds = effective_filter(ds_filt_cl, col_name='split', col_val='test')
+
+        # Now we add prefix to the source column of dataset
+        test_ds = test_ds.map(prompt_func_test, batched=True)
+
+        return test_ds
+
     # Selecting the training rows
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
 #    train_ds = train_ds.train_test_split(test_size=1-data_portion)['train']
@@ -64,3 +73,14 @@ def get_data_collator(tokenizer):
     response_template = " ### Response:"
     collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
     return collator
+
+
+def prompt_func_test(example):
+    # Applying the template
+    output_texts = []
+    for i in range(len(example['source'])):
+        max_source_length = int(2000 * AVG_WORD_TOKEN)
+        text = f"### Instruction: {example['source'][i][:max_source_length]}\n ### Response: "
+        output_texts.append(text)
+    return {'source': output_texts}
+
