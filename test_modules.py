@@ -29,6 +29,7 @@ if __name__ == "__main__":
 
     # Loading the model and tokeniser
     tokenizer = AutoTokenizer.from_pretrained(args.model_checkpoint_path)
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -40,14 +41,16 @@ if __name__ == "__main__":
                                                  device_map="auto")
 
     # Test with one sample
-    idx = 10
+    idx = 70
     input_ids = tokenizer(test_ds['source'][idx], return_tensors="pt").input_ids.to("cuda")
 
     # inference
     outputs = model.generate(
             input_ids=input_ids,
-            max_new_tokens=256,
+            eos_token_id=tokenizer.eos_token_id,
+            max_new_tokens=300,
             do_sample=True,
+            repetition_penalty=2.0,
             temperature=0.7,
             top_k=3,
             top_p=0.95
@@ -55,10 +58,10 @@ if __name__ == "__main__":
     print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
     print('-'*100)
     print('-'*100)
-    print(test_ds['source'][idx])
-    print('-'*100)
-    print('-'*100)
-    print(test_ds['target'][idx])
+    # print(test_ds['source'][idx])
+    # print('-'*100)
+    # print('-'*100)
+    # print(test_ds['target'][idx])
     # rouge = evaluate.load('rouge')
     # results = rouge.compute(predictions=[generated_text], references=[reference])
     # print(results)
