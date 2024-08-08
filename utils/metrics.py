@@ -3,6 +3,8 @@ import numpy as np
 
 
 def compute_experts_metrics(labels, predictions):
+    print(labels)
+    print(predictions)
     bleu_metric = load_metric('bleu', trust_remote_code=True)
     rouge_metric = load_metric('rouge', trust_remote_code=True)
     bert_score = load_metric('bertscore', trust_remote_code=True)
