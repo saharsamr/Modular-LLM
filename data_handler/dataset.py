@@ -39,16 +39,16 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
 
     if return_test:
         test_ds = effective_filter(ds_filt_cl, col_name='split', col_val='test')
-        test_ds = test_ds.train_test_split(test_size=1-data_portion)['train']
+        test_ds = test_ds if data_portion == 1.0 else test_ds.train_test_split(test_size=1-data_portion)['train']
         test_ds = test_ds.map(prompt_func_test, batched=True)
 
         return test_ds
 
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
-    train_ds = train_ds.train_test_split(test_size=1-data_portion)['train']
+    train_ds = train_ds if data_portion == 1.0 else train_ds.train_test_split(test_size=1-data_portion)['train']
 
     val_ds = effective_filter(ds_filt_cl, col_name='split', col_val='validation')
-    val_ds = val_ds.train_test_split(test_size=1-data_portion)['train']
+    val_ds = val_ds if data_portion == 1.0 else val_ds.train_test_split(test_size=1-data_portion)['train']
 
     return train_ds, val_ds
 
