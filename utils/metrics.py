@@ -15,11 +15,11 @@ def compute_experts_metrics(labels, predictions):
     predictions = [word_tokenize(pred) for pred in predictions]
 
     bleu_output = bleu_metric.compute(
-        predictions=predictions, references=references, max_order=1)
+        predictions=predictions, references=references, max_order=1)['precisions']
     rouge_output = rouge_metric.compute(
-        predictions=predictions, references=references, rouge_types=['rougeL'])
+        predictions=predictions, references=references, rouge_types=['rougeL'])['rougeL'][1]['fmeasure']
     bertscore_output = bert_score.compute(
-        predictions=predictions, references=references, lang='en', model_type='bert-base-uncased')
+        predictions=predictions, references=references, lang='en', model_type='bert-base-uncased')['f1']
 
     return {
         'bleu': bleu_output,
