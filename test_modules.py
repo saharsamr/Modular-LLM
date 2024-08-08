@@ -52,7 +52,7 @@ if __name__ == "__main__":
                 sample['source'], truncation=True, padding=False,
                 return_tensors='pt', max_length=MAX_SOURCE_TOKENS)
             outputs = model.generate(
-                    input_ids=input_ids,
+                    input_ids=[input_ids],
                     eos_token_id=tokenizer.eos_token_id,
                     pad_token_id=tokenizer.eos_token_id,
                     max_new_tokens=100,
