@@ -14,6 +14,7 @@ from tqdm import tqdm
 from utils.arg_parser import test_arg_parser
 from data_handler.dataset import read_dataset
 from utils.metrics import compute_experts_metrics
+from utils.config import *
 
 
 def set_seed(seed: int):
@@ -46,7 +47,10 @@ if __name__ == "__main__":
 
     for batch in tqdm(test_dataloader):
 
-        input_ids = tokenizer(batch['source'], return_tensors="pt").input_ids.to("cuda")
+        input_ids = tokenizer(
+            batch['source'], return_tensors="pt",
+            padding='max_length', truncation=True,
+            max_length=MAX_SOURCE_TOKENS).input_ids.to("cuda")
         outputs = model.generate(
                 input_ids=input_ids,
                 eos_token_id=tokenizer.eos_token_id,
