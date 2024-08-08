@@ -48,12 +48,12 @@ if __name__ == "__main__":
     for batch in tqdm(test_dataloader):
 
         input_ids = tokenizer(
-            batch['source'], return_tensors="pt",
-            padding='max_length', truncation=True,
+            batch['source'], padding='max_length', truncation=True,
             max_length=MAX_SOURCE_TOKENS).input_ids.to("cuda")
         outputs = model.generate(
                 input_ids=input_ids,
                 eos_token_id=tokenizer.eos_token_id,
+                pad_token_id=tokenizer.eos_token_id,
                 max_new_tokens=100,
         )
         labels = tokenizer.batch_decode(input_ids, skip_special_tokens=True)
@@ -61,3 +61,5 @@ if __name__ == "__main__":
 
         labels = [label.split('### Response:')[-1] for label in labels]
         outputs = [output.split('### Response:')[-1] for output in outputs]
+
+        print(compute_experts_metrics(outputs, outputs))
