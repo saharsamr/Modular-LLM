@@ -54,7 +54,7 @@ if __name__ == "__main__":
         outputs = model.generate(
                 input_ids=input_ids,
                 eos_token_id=tokenizer.eos_token_id,
-                max_new_tokens=300,
+                max_new_tokens=100,
                 do_sample=True,
                 repetition_penalty=2.0,
                 temperature=0.7,
