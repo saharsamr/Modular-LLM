@@ -9,3 +9,4 @@ evaluate
 absl-py
 nltk
 rouge-score
+bert-score
