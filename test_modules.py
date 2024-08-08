@@ -49,7 +49,8 @@ if __name__ == "__main__":
             top_k=3,
             top_p=0.95
     )
-    label = tokenizer.batch_decode(input_ids, skip_special_tokens=True)[0].split('Output:')[-1]
+    label = tokenizer.batch_decode(input_ids, skip_special_tokens=True)[0].split('### Response:')[-1]
+    output = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0].split('### Response:')[-1]
     print('-'*100)
     print(label)
     print('-'*100)
