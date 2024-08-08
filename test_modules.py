@@ -49,6 +49,7 @@ if __name__ == "__main__":
 
         input_ids = tokenizer(
             batch['source'], padding='max_length', truncation=True,
+            return_tensors='pt',
             max_length=MAX_SOURCE_TOKENS).input_ids.to("cuda")
         outputs = model.generate(
                 input_ids=input_ids,
