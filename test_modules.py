@@ -1,10 +1,16 @@
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    BitsAndBytesConfig
+)
+
 import torch
 import numpy as np
 import random
 
 from utils.arg_parser import test_arg_parser
 from data_handler.dataset import read_dataset
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, pipeline
+from utils.metrics import compute_experts_metrics
 
 
 def set_seed(seed: int):
@@ -56,6 +62,7 @@ if __name__ == "__main__":
     print('-'*100)
     print(output)
     print('-'*100)
+    print(compute_experts_metrics(label, output))
     # print(test_ds['source'][idx])
     # print('-'*100)
     # print('-'*100)

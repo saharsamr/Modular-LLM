@@ -2,13 +2,10 @@ from datasets import load_metric
 import numpy as np
 
 
-def compute_experts_metrics(eval_preds):
+def compute_experts_metrics(labels, predictions):
     bleu_metric = load_metric('bleu')
     rouge_metric = load_metric('rouge')
     bert_score = load_metric('bertscore')
-
-    logits, labels = eval_preds
-    predictions = np.argmax(logits, axis=-1)
 
     bleu_output = bleu_metric.compute(
         predictions=predictions, references=labels, max_order=1)
