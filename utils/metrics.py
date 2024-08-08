@@ -2,9 +2,15 @@ import nltk
 from nltk.tokenize import word_tokenize
 from datasets import load_metric
 import numpy as np
+import logging
 
 
 nltk.download('punkt')
+
+loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+for logger in loggers:
+    if "transformers" in logger.name.lower():
+        logger.setLevel(logging.ERROR)
 
 
 def compute_experts_metrics(labels, predictions):
