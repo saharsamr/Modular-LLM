@@ -55,14 +55,17 @@ if __name__ == "__main__":
             top_k=3,
             top_p=0.95
     )
-    label = tokenizer.batch_decode(input_ids, skip_special_tokens=True)[0].split('### Response:')[-1]
-    output = tokenizer.batch_decode(outputs, skip_special_tokens=True)[0].split('### Response:')[-1]
+    labels = tokenizer.batch_decode(input_ids, skip_special_tokens=True)
+    outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    labels = [label.split('### Response:')[-1] for label in labels]
+    outputs = [output.split('### Response:')[-1] for output in outputs]
     print('-'*100)
-    print(label)
+    print(labels)
     print('-'*100)
-    print(output)
+    print(outputs)
     print('-'*100)
-    print(compute_experts_metrics(label, output))
+    print(compute_experts_metrics(labels, outputs))
     # print(test_ds['source'][idx])
     # print('-'*100)
     # print('-'*100)
