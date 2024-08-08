@@ -10,3 +10,4 @@ absl-py
 nltk
 rouge-score
 bert-score
+tqdm

@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 import random
 
+from tqdm import tqdm
+
 from utils.arg_parser import test_arg_parser
 from data_handler.dataset import read_dataset
 from utils.metrics import compute_experts_metrics
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     test_ds = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
     test_dataloader = DataLoader(test_ds, batch_size=args.batch_size)
 
-    for batch in test_dataloader:
+    for batch in tqdm(test_dataloader):
 
         input_ids = tokenizer(batch['source'], return_tensors="pt").input_ids.to("cuda")
         outputs = model.generate(
