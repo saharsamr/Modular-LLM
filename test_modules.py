@@ -54,7 +54,7 @@ if __name__ == "__main__":
     print('-'*100)
     print(label)
     print('-'*100)
-    print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    print(output)
     print('-'*100)
     # print(test_ds['source'][idx])
     # print('-'*100)
