@@ -62,7 +62,6 @@ if __name__ == "__main__":
         formatting_func=formatting_prompts_func
     )
 
-    # Creating train_data and eval_data
     train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
     
     data_collator = get_data_collator(module_trainer.tokenizer)

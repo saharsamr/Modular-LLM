@@ -5,6 +5,7 @@ from transformers import (
 )
 
 import torch
+from torch.utils.data import DataLoader
 import numpy as np
 import random
 
@@ -24,8 +25,6 @@ if __name__ == "__main__":
     args = test_arg_parser()
     set_seed(args.seed)
 
-    test_ds = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
-
     tokenizer = AutoTokenizer.from_pretrained(args.model_checkpoint_path)
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     quantization_config = BitsAndBytesConfig(
@@ -40,36 +39,26 @@ if __name__ == "__main__":
         device_map="auto"
     )
 
-    # Test with one sample
-    idx = 70
-    input_ids = tokenizer(test_ds['source'][idx], return_tensors="pt").input_ids.to("cuda")
+    test_ds = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
+    test_dataloader = DataLoader(test_ds, batch_size=args.batch_size)
 
-    # inference
-    outputs = model.generate(
-            input_ids=input_ids,
-            eos_token_id=tokenizer.eos_token_id,
-            max_new_tokens=300,
-            do_sample=True,
-            repetition_penalty=2.0,
-            temperature=0.7,
-            top_k=3,
-            top_p=0.95
-    )
-    labels = tokenizer.batch_decode(input_ids, skip_special_tokens=True)
-    outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+    for batch in test_dataloader:
 
-    labels = [label.split('### Response:')[-1] for label in labels]
-    outputs = [output.split('### Response:')[-1] for output in outputs]
+        input_ids = tokenizer(batch['source'], return_tensors="pt").input_ids.to("cuda")
+        outputs = model.generate(
+                input_ids=input_ids,
+                eos_token_id=tokenizer.eos_token_id,
+                max_new_tokens=300,
+                do_sample=True,
+                repetition_penalty=2.0,
+                temperature=0.7,
+                top_k=3,
+                top_p=0.95
+        )
+        labels = tokenizer.batch_decode(input_ids, skip_special_tokens=True)
+        outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    print(compute_experts_metrics(outputs, outputs))
-    # print(test_ds['source'][idx])
-    # print('-'*100)
-    # print('-'*100)
-    # print(test_ds['target'][idx])
-    # rouge = evaluate.load('rouge')
-    # results = rouge.compute(predictions=[generated_text], references=[reference])
-    # print(results)
+        labels = [label.split('### Response:')[-1] for label in labels]
+        outputs = [output.split('### Response:')[-1] for output in outputs]
 
-    
-
-    
+        print(compute_experts_metrics(outputs, outputs))
