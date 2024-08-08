@@ -6,3 +6,6 @@ wandb
 bitsandbytes
 trl
 evaluate
+absl
+nltk
+rouge_score
