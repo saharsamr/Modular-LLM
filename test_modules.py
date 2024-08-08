@@ -61,7 +61,7 @@ if __name__ == "__main__":
     labels = [label.split('### Response:')[-1] for label in labels]
     outputs = [output.split('### Response:')[-1] for output in outputs]
 
-    print(compute_experts_metrics(labels, outputs))
+    print(compute_experts_metrics(outputs, outputs))
     # print(test_ds['source'][idx])
     # print('-'*100)
     # print('-'*100)
