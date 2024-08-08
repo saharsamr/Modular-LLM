@@ -6,6 +6,6 @@ wandb
 bitsandbytes
 trl
 evaluate
-absl
+absl-py
 nltk
-rouge_score
+rouge-score
