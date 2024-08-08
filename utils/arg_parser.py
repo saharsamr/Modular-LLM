@@ -43,7 +43,7 @@ def test_arg_parser():
     parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
-    parser.add_argument("--batch_size", type=int, default=4)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--model_checkpoint_path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=1234)
