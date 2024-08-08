@@ -59,5 +59,8 @@ if __name__ == "__main__":
             )
             labels = sample['target']
             outputs = tokenizer.decode(outputs[len(input_ids):], skip_special_tokens=True)
+            print(labels)
+            print(outputs)
+            print('--------------------------------')
 
             print(compute_experts_metrics(outputs, outputs))
