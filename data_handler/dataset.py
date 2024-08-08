@@ -64,13 +64,15 @@ def formatting_prompts_func(example):
     output_texts = []
     for i in range(len(example['source'])):
         max_source_length = int((MAX_LENGTH - len(example['target'][i].split())) / AVG_WORD_TOKEN)
-        text = f"### Instruction: {example['source'][i][:max_source_length]}\n ### Response: {example['target'][i]}"
+        source = ' '.join(example['source'][i].split()[:max_source_length])
+        source = source if source[-1] == '.' else source + '.'
+        text = f"Instruct: {source}\nOutput: {example['target'][i]}"
         output_texts.append(text)
     return output_texts
 
 
 def get_data_collator(tokenizer):
-    response_template = " ### Response:"
+    response_template = "Output:"
     collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
     return collator
 
@@ -80,7 +82,9 @@ def prompt_func_test(example):
     output_texts = []
     for i in range(len(example['source'])):
         max_source_length = int(2000 * AVG_WORD_TOKEN)
-        text = f"### Instruction: {example['source'][i][:max_source_length]}\n ### Response: "
+        source = ' '.join(example['source'][i].split()[:max_source_length])
+        source = source if source[-1] == '.' else source + '.'
+        text = f"Instruct: {source}\nOutput: "
         output_texts.append(text)
     return {'source': output_texts}
 

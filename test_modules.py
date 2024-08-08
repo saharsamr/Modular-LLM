@@ -1,8 +1,6 @@
 import torch
 import numpy as np
 import random
-import evaluate
-# import wandb
 
 from utils.arg_parser import test_arg_parser
 from data_handler.dataset import read_dataset
@@ -16,18 +14,12 @@ def set_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
 
 
-
 if __name__ == "__main__":
     args = test_arg_parser()
     set_seed(args.seed)
 
-    # wandb.init(project=args.project_name, name=run_name)
-    # wandb.config.update(dict(vars(args)), allow_val_change=True)
-
-    # Creating test_dataset (The prompting function is applied on the source column)
     test_ds = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
 
-    # Loading the model and tokeniser
     tokenizer = AutoTokenizer.from_pretrained(args.model_checkpoint_path)
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     quantization_config = BitsAndBytesConfig(
@@ -35,10 +27,12 @@ if __name__ == "__main__":
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float16,  # TODO: what dtype?
             bnb_4bit_use_double_quant=False,
-        )
-    model = AutoModelForCausalLM.from_pretrained(args.model_checkpoint_path, 
-                                                 quantization_config=quantization_config, 
-                                                 device_map="auto")
+    )
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_checkpoint_path,
+        quantization_config=quantization_config,
+        device_map="auto"
+    )
 
     # Test with one sample
     idx = 70
@@ -55,8 +49,11 @@ if __name__ == "__main__":
             top_k=3,
             top_p=0.95
     )
-    print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
+    label = input_ids.batch_decode(input_ids, skip_special_tokens=True)[0].split('Output:')[-1]
     print('-'*100)
+    print(label)
+    print('-'*100)
+    print(tokenizer.batch_decode(outputs, skip_special_tokens=True)[0])
     print('-'*100)
     # print(test_ds['source'][idx])
     # print('-'*100)
