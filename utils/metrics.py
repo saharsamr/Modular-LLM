@@ -1,5 +1,9 @@
+import nltk
 from nltk.tokenize import word_tokenize
 from datasets import load_metric
+
+
+nltk.download('punkt')
 
 
 def compute_experts_metrics(labels, predictions):
