@@ -71,11 +71,12 @@ def get_data_collator(tokenizer):
 
 
 def prompt_func_test(example):
-    output_texts = []
+    input_texts, output_texts = [], []
     for i in range(len(example['source'])):
         max_source_length = int(MAX_SOURCE_TOKENS / AVG_WORD_TOKEN)
         source = ' '.join(example['source'][i].split()[:max_source_length])
         source = source if source[-1] == '.' else source + '.'
         text = f"Instruct: {source}\nOutput: "
-        output_texts.append(text)
-    return {'source': output_texts}
+        input_texts.append(text)
+        output_texts.append(example['target'][i])
+    return {'source': input_texts, 'target': output_texts}

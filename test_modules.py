@@ -43,24 +43,21 @@ if __name__ == "__main__":
     )
 
     test_ds = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
-    # test_dataloader = DataLoader(test_ds, batch_size=args.batch_size)
+    test_dataloader = DataLoader(test_ds, batch_size=args.batch_size)
 
     with torch.no_grad():
         for sample in test_ds:
 
             input_ids = tokenizer(
-                sample['source'], truncation=True, padding=False,
-                return_tensors='pt', max_length=MAX_SOURCE_TOKENS)
+                sample['source'], padding='max_length', truncation=True,
+                return_tensors='pt', max_length=MAX_SOURCE_TOKENS).input_ids.to("cuda")
             outputs = model.generate(
-                    input_ids=[input_ids],
+                    input_ids=input_ids,
                     eos_token_id=tokenizer.eos_token_id,
                     pad_token_id=tokenizer.eos_token_id,
                     max_new_tokens=100,
             )
-            labels = tokenizer.decode(input_ids, skip_special_tokens=True)
-            outputs = tokenizer.decode(outputs, skip_special_tokens=True)
-
-            labels = [label.split('### Response:')[-1] for label in labels]
-            outputs = [output.split('### Response:')[-1] for output in outputs]
+            labels = sample['target']
+            outputs = tokenizer.decode(outputs[len(input_ids):], skip_special_tokens=True)
 
             print(compute_experts_metrics(outputs, outputs))
