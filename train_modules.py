@@ -48,7 +48,6 @@ if __name__ == "__main__":
         eval_steps=args.eval_every,
         report_to="wandb",
         run_name=run_name,  # TODO: Might be changed.
-        metric_for_best_model=args.metric_for_best_model,
         load_best_model_at_end=args.load_best_model_at_end,
         save_total_limit=args.save_total_limit
     )
