@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     metrics = {'bleu': [], 'rouge': [], 'bertscore': []}
     with torch.no_grad():
-        with open(f'preds/cluster{args.coluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', 'w+') as f:
+        with open(f'preds/cluster{args.cluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', 'w+') as f:
             f.write('label\1prediction\n')
             for batch in tqdm(test_dataloader):
                 input_ids = tokenizer(
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                     f.write(f'{label}\1{output}\n')
 
     predictions = pd.read_csv(
-        f'preds/cluster{args.coluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', sep='\1')
+        f'preds/cluster{args.cluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', sep='\1')
     metrics = compute_experts_metrics(predictions['label'], predictions['prediction'])
 
     print('=' * 100)
