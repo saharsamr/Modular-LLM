@@ -18,15 +18,12 @@ def compute_experts_metrics(labels, predictions):
     rouge_metric = evaluate.load('rouge', trust_remote_code=True)
     bert_score = evaluate.load('bertscore', trust_remote_code=True)
 
-    references = [[word_tokenize(ref)] for ref in labels]
-    predictions = [word_tokenize(pred) for pred in predictions]
-
     bleu_output = bleu_metric.compute(
-        predictions=predictions, references=references, max_order=1)['precisions'][0]
+        predictions=predictions, references=labels, max_order=1)['bleu']
     rouge_output = rouge_metric.compute(
-        predictions=predictions, references=references, rouge_types=['rougeL'])['rougeL'][1][2]
+        predictions=predictions, references=labels, rouge_types=['rougeL'])['rougeL']
     bertscore_output = bert_score.compute(
-        predictions=predictions, references=references, lang='en', model_type='bert-base-uncased')['f1']
+        predictions=predictions, references=labels, lang='en', model_type='bert-base-uncased')['f1']
     bertscore_output = np.mean(bertscore_output)
 
     return {
