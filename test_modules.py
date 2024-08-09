@@ -67,7 +67,7 @@ if __name__ == "__main__":
             metrics['bertscore'].append(batch_metrics['bertscore'])
 
     print('=' * 100)
-    print('BLEU:', np.mean(metrics['blue']))
+    print('BLEU:', np.mean(metrics['bleu']))
     print('ROUGE:', np.mean(metrics['rouge']))
     print('BERTSCORE:', np.mean(metrics['bertscore']))
     print('=' * 100)
