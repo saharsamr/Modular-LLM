@@ -57,6 +57,7 @@ if __name__ == "__main__":
                     pad_token_id=tokenizer.eos_token_id,
                     max_new_tokens=100,
             )
+            print(outputs)
             labels = sample['target']
             outputs = tokenizer.decode(outputs[len(input_ids):], skip_special_tokens=True)
             print(labels)
