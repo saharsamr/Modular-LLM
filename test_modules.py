@@ -7,7 +7,6 @@ from transformers import (
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
-import pandas as pd
 import random
 
 from tqdm import tqdm
@@ -48,8 +47,6 @@ if __name__ == "__main__":
 
     metrics = {'bleu': [], 'rouge': [], 'bertscore': []}
     with torch.no_grad():
-        # with open(f'preds/cluster{args.cluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', 'w+') as f:
-        #     f.write('label\1prediction\n')
         for batch in tqdm(test_dataloader):
             input_ids = tokenizer(
                 batch['source'], padding='max_length', truncation=True,
@@ -68,13 +65,6 @@ if __name__ == "__main__":
             metrics['bleu'].append(batch_metrics['bleu'])
             metrics['rouge'].append(batch_metrics['rouge'])
             metrics['bertscore'].append(batch_metrics['bertscore'])
-
-    #             for label, output in zip(labels, outputs):
-    #                 f.write(f'{label}\1{output}\n')
-    #
-    # predictions = pd.read_csv(
-    #     f'preds/cluster{args.cluster_idx}_batch{args.batch_size}_prop{args.data_portion}.csv', sep='\1')
-    # metrics = compute_experts_metrics(predictions['label'], predictions['prediction'])
 
     print('=' * 100)
     print('BLEU:', np.mean(metrics['blue']))
