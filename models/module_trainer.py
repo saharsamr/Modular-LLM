@@ -38,13 +38,13 @@ class LoraModuleTrainer:
         self.bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,  # TODO: what dtype?
+            bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=False,
         )
         
         self.base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
-            torch_dtype=torch.float16,  # TODO: what dtype?
+            torch_dtype=torch.float16,
             quantization_config=self.bnb_config
         )
         
@@ -53,7 +53,7 @@ class LoraModuleTrainer:
             r=lora_rank,
             lora_alpha=lora_alpha,
             loftq_config=self.loftq_config,
-            target_modules=LORA_TARGET_MODULES,  # TODO: what are the target modules exactly?
+            target_modules=LORA_TARGET_MODULES,
             modules_to_save=OTHER_TRAINABLE_MODULES,  # TODO: what other modules should be trainable?
             lora_dropout=self.lora_dropout,
             bias='none',

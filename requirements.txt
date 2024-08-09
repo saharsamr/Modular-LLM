@@ -11,3 +11,4 @@ nltk
 rouge-score
 bert-score
 tqdm
+evaluate

@@ -1,6 +1,6 @@
 import nltk
 from nltk.tokenize import word_tokenize
-from datasets import load_metric
+import evaluate
 import numpy as np
 import logging
 
@@ -14,9 +14,9 @@ for logger in loggers:
 
 
 def compute_experts_metrics(labels, predictions):
-    bleu_metric = load_metric('bleu', trust_remote_code=True)
-    rouge_metric = load_metric('rouge', trust_remote_code=True)
-    bert_score = load_metric('bertscore', trust_remote_code=True)
+    bleu_metric = evaluate.load('bleu', trust_remote_code=True)
+    rouge_metric = evaluate.load('rouge', trust_remote_code=True)
+    bert_score = evaluate.load('bertscore', trust_remote_code=True)
 
     references = [[word_tokenize(ref)] for ref in labels]
     predictions = [word_tokenize(pred) for pred in predictions]
