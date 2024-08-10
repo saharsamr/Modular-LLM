@@ -58,7 +58,7 @@ if __name__ == "__main__":
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         max_length=args.max_length,
-        # formatting_func=formatting_prompts_func
+        formatting_func=formatting_prompts_func
     )
 
     train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
@@ -69,5 +69,5 @@ if __name__ == "__main__":
         train_data=train_data, 
         eval_data=eval_data,  
         training_args=training_arguments,
-        # collator=data_collator
+        collator=data_collator
     )
