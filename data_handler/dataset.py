@@ -35,6 +35,8 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
         return filtered
 
     ds = load_dataset(ds_name, cache_dir="../data/", split="train")
+    ds = ds.rename_column("source", "prompt")
+    ds = ds.rename_column("target", "completion")
     ds_filt_cl = effective_filter(ds, col_name='template_idx', col_val=cluster_idx)
 
     if return_test:
