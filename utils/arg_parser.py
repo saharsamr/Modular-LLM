@@ -16,7 +16,7 @@ def train_arg_parser():
     parser.add_argument("--lora_dropout", type=float, default=0.05)
     parser.add_argument("--continue_from", type=str, default=None)
     parser.add_argument("--batch_size", type=int, required=True)
-    parser.add_argument("--eval_batch_size", type=int, default=4)
+    parser.add_argument("--eval_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation", type=int, default=16)
     parser.add_argument("--optimizer", default="paged_adamw_8bit")
     parser.add_argument("--lr", type=float, default=1e-4)
