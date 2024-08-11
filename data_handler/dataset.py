@@ -1,9 +1,6 @@
 from datasets import load_dataset
 import pyarrow.dataset as pds
 import pyarrow.compute as pc
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
-
-from utils.config import *
 
 
 def read_dataset(ds_name, cluster_idx, data_portion, return_test):
@@ -53,30 +50,16 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
     return train_ds, val_ds
 
 
-def formatting_prompts_func(example):
-    output_texts = []
-    for i in range(len(example['source'])):
-        max_source_length = int((MAX_LENGTH - len(example['target'][i].split())) / AVG_WORD_TOKEN)
-        source = ' '.join(example['source'][i].split()[:max_source_length])
-        source = source if source[-1] == '.' else source + '.'
-        text = f"Instruct: {source}\nOutput: {example['target'][i]}"
-        output_texts.append(text)
-    return output_texts
-
-
-def get_data_collator(tokenizer):
-    response_template = "Output:"
-    collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
-    return collator
-
-
-def prompt_func_test(example):
-    input_texts, output_texts = [], []
-    for i in range(len(example['source'])):
-        max_source_length = int(MAX_SOURCE_TOKENS / AVG_WORD_TOKEN)
-        source = ' '.join(example['source'][i].split()[:max_source_length])
-        source = source if source[-1] == '.' else source + '.'
-        text = f"Instruct: {source}\nOutput: "
-        input_texts.append(text)
-        output_texts.append(example['target'][i])
-    return {'source': input_texts, 'target': output_texts}
+def create_message_column(row):
+    messages = []
+    user = {
+        "content": f"{row['source']}",
+        "role": "user"
+    }
+    messages.append(user)
+    assistant = {
+        "content": f"{row['target']}",
+        "role": "assistant"
+    }
+    messages.append(assistant)
+    return {"messages": messages}

@@ -1,7 +1,5 @@
-AVG_WORD_TOKEN = 1.45
-MAX_SOURCE_TOKENS = 1600
-MAX_LENGTH = 2048
+MAX_LENGTH = 4000
 
-LORA_TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "dense"]
+LORA_TARGET_MODULES = ["o_proj", "qkv_proj"]
 OTHER_TRAINABLE_MODULES = ['embed_tokens', 'lm_head']
 TASK_TYPE = "CAUSAL_LM"

@@ -12,6 +12,7 @@ from peft import (
 )
 from trl import SFTTrainer
 
+from data_handler.dataset import create_message_column
 from utils.config import *
 
 
@@ -19,19 +20,19 @@ class LoraModuleTrainer:
 
     def __init__(
             self,
-            base_model_name,
-            lora_rank, lora_alpha, lora_dropout,
-            max_length, formatting_func
+            base_model_name, lora_rank, lora_alpha,
+            lora_dropout, max_length
     ):
         self.model_name = base_model_name
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.lora_dropout = lora_dropout
-        self.formatting_func = formatting_func
         self.max_length = max_length
 
         # TODO: check if the tokenizer needs any special config or alternation
-        self.tokenizer = AutoTokenizer.from_pretrained(base_model_name, use_fast=True, model_max_length=max_length)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            base_model_name, use_fast=True, padding_side='right', model_max_length=max_length
+        )
         self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
         # TODO: if we are going to use any other type of quantization, this should be parametrized
@@ -41,13 +42,13 @@ class LoraModuleTrainer:
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=False,
         )
-        
+
         self.base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
             torch_dtype=torch.float16,
             quantization_config=self.bnb_config
         )
-        
+
         self.loftq_config = LoftQConfig(loftq_bits=4)
         self.lora_config = LoraConfig(
             r=lora_rank,
@@ -64,15 +65,28 @@ class LoraModuleTrainer:
         self.model.print_trainable_parameters()
         self.model.config.use_cache = False
 
-    def train(self, train_data, eval_data, training_args, collator):
+    def train(self, train_data, eval_data, training_args):
+        train_data = train_data.map(create_message_column)
+        train_data = train_data.map(
+            lambda sample:
+            {"text": self.tokenizer.apply_chat_template(
+                sample["messages"], add_generation_prompt=False, tokenize=False)}
+        )
+
+        eval_data = eval_data.map(create_message_column)
+        eval_data = eval_data.map(
+            lambda sample:
+            {"text": self.tokenizer.apply_chat_template(
+                sample["messages"], add_generation_prompt=False, tokenize=False)}
+        )
+
         trainer = SFTTrainer(
-                        model=self.model,
-                        train_dataset=train_data,
-                        eval_dataset=eval_data,
-                        formatting_func=self.formatting_func,
-                        data_collator=collator,
-                        max_seq_length=self.max_length,
-                        tokenizer=self.tokenizer,
-                        args=training_args,
-                    )
+            model=self.model,
+            train_dataset=train_data,
+            eval_dataset=eval_data,
+            dataset_text_field='text',
+            max_seq_length=self.max_length,
+            tokenizer=self.tokenizer,
+            args=training_args,
+        )
         trainer.train()
