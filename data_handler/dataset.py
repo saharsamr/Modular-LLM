@@ -63,3 +63,13 @@ def create_message_column(row):
     }
     messages.append(assistant)
     return {"messages": messages}
+
+
+def create_message_column_for_test(row):
+    messages = []
+    user = {
+        "content": f"{row['source']}",
+        "role": "user"
+    }
+    messages.append(user)
+    return {"messages": messages}
