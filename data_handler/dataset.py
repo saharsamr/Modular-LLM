@@ -37,7 +37,6 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
     if return_test:
         test_ds = effective_filter(ds_filt_cl, col_name='split', col_val='test')
         test_ds = test_ds if data_portion == 1.0 else test_ds.train_test_split(test_size=1-data_portion)['train']
-        test_ds = test_ds.map(prompt_func_test, batched=True)
 
         return test_ds
 
