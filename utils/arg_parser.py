@@ -31,7 +31,7 @@ def train_arg_parser():
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--metric_for_best_model", type=str, default='eval_loss')
     parser.add_argument("--load_best_model_at_end", type=bool, default='True')
-    parser.add_argument("--save_total_limit", type=int, default=1)
+    parser.add_argument("--save_total_limit", type=int, default=2)
 
     return parser.parse_args()
 
