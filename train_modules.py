@@ -1,4 +1,3 @@
-import os
 import random
 
 import wandb
@@ -8,9 +7,10 @@ from transformers import (
     TrainingArguments
 )
 
-from utils.arg_parser import arg_parser
+from utils.arg_parser import train_arg_parser
 from models.module_trainer import LoraModuleTrainer
-from data_handler.dataset import read_dataset, get_data_collator, formatting_prompts_func
+from data_handler.dataset import read_dataset
+from utils.config import *
 
 
 def set_seed(seed: int):
@@ -21,7 +21,7 @@ def set_seed(seed: int):
 
 
 if __name__ == "__main__":
-    args = arg_parser()
+    args = train_arg_parser()
     set_seed(args.seed)
 
     run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
@@ -32,9 +32,9 @@ if __name__ == "__main__":
         output_dir=args.output_dir + '/' + run_name,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
-        per_device_eval_batch_size=16,
+        per_device_eval_batch_size=args.eval_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation,
-        gradient_checkpointing=False,
+        gradient_checkpointing=True,
         learning_rate=args.lr,
         weight_decay=args.weight_decay,
         optim=args.optimizer,
@@ -48,7 +48,6 @@ if __name__ == "__main__":
         eval_steps=args.eval_every,
         report_to="wandb",
         run_name=run_name,  # TODO: Might be changed.
-        metric_for_best_model=args.metric_for_best_model,
         load_best_model_at_end=args.load_best_model_at_end,
         save_total_limit=args.save_total_limit
     )
@@ -58,18 +57,13 @@ if __name__ == "__main__":
         lora_rank=args.rank,
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
-        max_length=args.max_length,
-        formatting_func=formatting_prompts_func
+        max_length=MAX_LENGTH
     )
 
-    # Creating train_data and eval_data
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion)
-    
-    data_collator = get_data_collator(module_trainer.tokenizer)
-    
+    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+
     module_trainer.train(
-        train_data=train_data, 
-        eval_data=eval_data,  
-        training_args=training_arguments,
-        collator=data_collator
+        train_data=train_data,
+        eval_data=eval_data,
+        training_args=training_arguments
     )

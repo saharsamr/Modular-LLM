@@ -5,3 +5,10 @@ peft
 wandb
 bitsandbytes
 trl
+evaluate
+absl-py
+nltk
+rouge-score
+bert-score
+tqdm
+evaluate
