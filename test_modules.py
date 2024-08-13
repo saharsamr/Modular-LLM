@@ -46,7 +46,7 @@ if __name__ == "__main__":
     model = model.merge_and_unload()
 
     print('Initializing Pipeline ...')
-    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer)
+    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
     print('Loading and Processing Data ...')
     test_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
@@ -63,10 +63,6 @@ if __name__ == "__main__":
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
-
-        if (i % 100) == 0:
-            gc.collect()
-            torch.cuda.empty_cache()
 
         references.extend(batch['target'])
         predictions.extend(preds)
