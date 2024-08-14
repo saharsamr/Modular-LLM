@@ -27,7 +27,7 @@ def train_arg_parser():
     parser.add_argument("--eval_every", type=int, default=1000)
     parser.add_argument("--log_every", type=int, default=100)
 
-    parser.add_argument("--save_every", type=int, default=500)
+    parser.add_argument("--save_every", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--metric_for_best_model", type=str, default='eval_loss')
