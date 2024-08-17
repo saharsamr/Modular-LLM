@@ -3,7 +3,7 @@ import pyarrow.dataset as pds
 import pyarrow.compute as pc
 
 
-def read_dataset(ds_name, cluster_idx, data_portion, return_test):
+def read_dataset(ds_name, cluster_idx, data_portion, return_test, seed):
 
     """
     Returns the samples in the dataset based on the value of cluster_idx.
@@ -40,6 +40,7 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
 
         return test_ds
 
+    # train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train').shuffle(seed=seed)
     train_ds = effective_filter(ds_filt_cl, col_name='split', col_val='train')
     train_ds = train_ds if data_portion == 1.0 else train_ds.train_test_split(test_size=1-data_portion)['train']
 

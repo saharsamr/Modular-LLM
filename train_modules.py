@@ -34,7 +34,7 @@ if __name__ == "__main__":
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.eval_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation,
-        max_grad_norm=0.2,
+        max_grad_norm=2.0,
         gradient_checkpointing=True,
         learning_rate=args.lr,
         weight_decay=args.weight_decay,
@@ -61,7 +61,8 @@ if __name__ == "__main__":
         max_length=MAX_LENGTH
     )
 
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False,
+                                         seed=args.seed)
 
     module_trainer.train(
         train_data=train_data,

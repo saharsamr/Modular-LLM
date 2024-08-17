@@ -48,7 +48,7 @@ if __name__ == "__main__":
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
     print('Loading and Processing Data ...')
-    test_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True)
+    test_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=True, seed=args.seed)
     test_data = test_data.map(create_message_column_for_test)
     test_data = test_data.map(
         lambda sample:
