@@ -8,6 +8,7 @@ from peft import PeftModel
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
+import gc
 
 import random
 from tqdm import tqdm
@@ -65,6 +66,10 @@ if __name__ == "__main__":
 
         references.extend(batch['target'])
         predictions.extend(preds)
+
+        if (i % 100) == 0:
+            torch.cuda.empty_cache()
+            gc.collect()
 
     metrics = compute_experts_metrics(references, predictions)
     print('=' * 100)
