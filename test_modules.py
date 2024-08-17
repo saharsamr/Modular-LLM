@@ -57,6 +57,9 @@ if __name__ == "__main__":
     )
     test_dataloader = DataLoader(test_data, batch_size=args.batch_size)
 
+    torch.cuda.empty_cache()
+    gc.collect()
+    
     print('Generating Predictions ...')
     references = []
     predictions = []
