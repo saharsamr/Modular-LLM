@@ -57,9 +57,6 @@ if __name__ == "__main__":
     )
     test_dataloader = DataLoader(test_data, batch_size=args.batch_size)
 
-    torch.cuda.empty_cache()
-    gc.collect()
-    
     print('Generating Predictions ...')
     references = []
     predictions = []
@@ -69,10 +66,6 @@ if __name__ == "__main__":
 
         references.extend(batch['target'])
         predictions.extend(preds)
-
-        if (i % 100) == 0:
-            torch.cuda.empty_cache()
-            gc.collect()
 
     metrics = compute_experts_metrics(references, predictions)
     print('=' * 100)
