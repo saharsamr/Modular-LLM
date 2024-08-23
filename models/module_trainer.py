@@ -55,7 +55,7 @@ class LoraModuleTrainer:
             lora_alpha=lora_alpha,
             loftq_config=self.loftq_config,
             target_modules=LORA_TARGET_MODULES,
-            modules_to_save=OTHER_TRAINABLE_MODULES,  # TODO: what other modules should be trainable?
+            modules_to_save=OTHER_TRAINABLE_MODULES,
             lora_dropout=self.lora_dropout,
             bias='none',
             task_type=TASK_TYPE
