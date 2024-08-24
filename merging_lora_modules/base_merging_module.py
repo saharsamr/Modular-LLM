@@ -20,16 +20,16 @@ cluster_checkpoint_names = {
 class BaseMergingModule:
     def __init__(self, base_model):
         self.base_model = base_model
-        self.peft_models = {}
 
     def merge(self):
         raise NotImplementedError
 
-    def load_lora_module(self, path):
-        for cluster_name, cluster_path in cluster_checkpoint_names:
-            self.peft_models[cluster_name] = PeftModel.from_pretrained(
-                self.base_model, cluster_checkpoint_names[cluster_name], adapter_name=cluster_name
-            )
+    def load_lora_modules(self):
+        self.base_model = PeftModel.from_pretrained(
+            self.base_model, cluster_checkpoint_names['cluster0'], adapter_name='cluster0')
+        for cluster_name, cluster_path in cluster_checkpoint_names.items():
+            if cluster_name != 'cluster0':
+                self.base_model.load_adapter(cluster_path, adapter_name=cluster_name)
 
     def get_model(self):
         return self.base_model
