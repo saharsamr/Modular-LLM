@@ -13,7 +13,7 @@ import random
 from tqdm import tqdm
 import gc
 
-from utils.arg_parser import test_arg_parser
+from utils.arg_parser import experts_testing_arg_parser
 from data_handler.dataset import read_dataset, create_message_column_for_test
 from utils.metrics import compute_experts_metrics
 from utils.config import *
@@ -27,7 +27,7 @@ def set_seed(seed: int):
 
 
 if __name__ == "__main__":
-    args = test_arg_parser()
+    args = experts_testing_arg_parser()
     set_seed(args.seed)
 
     tokenizer = AutoTokenizer.from_pretrained(

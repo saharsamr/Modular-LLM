@@ -7,7 +7,7 @@ from transformers import (
     TrainingArguments
 )
 
-from utils.arg_parser import train_arg_parser
+from utils.arg_parser import experts_training_arg_parser
 from models.module_trainer import LoraModuleTrainer
 from data_handler.dataset import read_dataset
 from utils.config import *
@@ -21,7 +21,7 @@ def set_seed(seed: int):
 
 
 if __name__ == "__main__":
-    args = train_arg_parser()
+    args = experts_training_arg_parser()
     set_seed(args.seed)
 
     run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)

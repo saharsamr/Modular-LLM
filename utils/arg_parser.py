@@ -2,7 +2,7 @@ import argparse
 from utils.config import *
 
 
-def train_arg_parser():
+def experts_training_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
@@ -37,7 +37,7 @@ def train_arg_parser():
     return parser.parse_args()
 
 
-def test_arg_parser():
+def experts_testing_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
@@ -48,5 +48,14 @@ def test_arg_parser():
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--model_checkpoint_path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=1234)
+
+    return parser.parse_args()
+
+
+def experts_merging_arg_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--project_name", type=str, default='Modular-LLM')
 
     return parser.parse_args()
