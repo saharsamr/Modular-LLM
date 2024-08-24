@@ -41,7 +41,7 @@ if __name__ == "__main__":
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=False,
         )
-    model = AutoModelForCausalLM.from_pretrained(args.model_checkpoint_path, torch_dtype=torch.float16, quantization_config=bnb_config)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
     model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
     model = model.merge_and_unload()
 
