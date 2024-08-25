@@ -10,10 +10,12 @@ class SimpleAveraging(BaseMergingModule):
 
     def merge(self):
         self.load_lora_modules()
+        adapter_names = list(cluster_checkpoint_names.keys())
         self.base_model.add_weighted_adapter(
-            adapters=cluster_checkpoint_names.keys(),
-            weights=[1/len(cluster_checkpoint_names.keys()) for _ in cluster_checkpoint_names.keys()],
+            adapters=adapter_names,
+            weights=[1/len(adapter_names) for _ in adapter_names],
             combination_type='linear',
             adapter_name='simple_average'
         )
-        self.base_model.set_adapters('simple_average')
+        self.base_model.set_adapter('simple_average')
+        self.base_model = self.base_model.merge_and_unload()
