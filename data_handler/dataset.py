@@ -119,6 +119,8 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
 
     - param1: dataset name from hf hub --> str
     - param2: index of the cluster that we want from the dataset --> str
+    - param3: data proportion
+    - param4: flag for returning test dataset
 
     - return: the dataset containing all the samples with that specific cluster_idx
     """
