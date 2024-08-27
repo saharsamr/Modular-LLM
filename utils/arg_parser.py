@@ -6,7 +6,7 @@ def experts_training_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
-    parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
+    parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)
     parser.add_argument("--output_dir", type=str, default='./results')
@@ -41,7 +41,7 @@ def experts_testing_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
-    parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
+    parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
     parser.add_argument("--batch_size", type=int, default=1)
