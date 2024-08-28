@@ -15,8 +15,8 @@ from data_handler.dataset import (
 
 
 class XLoraAveraging(BaseMergingModule):
-    def __init__(self, base_model, model_name):
-        super().__init__(base_model, model_name)
+    def __init__(self, base_model, tokenizer, model_name):
+        super().__init__(base_model, tokenizer, model_name)
 
     def merge(self, load_path=None):
         if load_path:
