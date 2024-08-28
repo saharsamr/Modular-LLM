@@ -15,7 +15,7 @@ import gc
 
 from utils.arg_parser import experts_testing_arg_parser
 from data_handler.dataset import read_dataset, create_message_column_for_test
-from utils.metrics import compute_experts_metrics
+from utils.metrics import compute_generation_metrics
 from utils.config import *
 
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         references.extend(batch['target'])
         predictions.extend(preds)
 
-    metrics = compute_experts_metrics(references, predictions)
+    metrics = compute_generation_metrics(references, predictions)
     print('=' * 100)
     print('BLEU:', metrics['bleu'])
     print('ROUGE:', metrics['rouge'])

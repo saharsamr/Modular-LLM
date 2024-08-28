@@ -58,5 +58,7 @@ def experts_merging_arg_parser():
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--merging_strategy", type=str, required=True, choices=['simple_average', 'xlora_average'])
+    parser.add_argument("--checkpoint_path", type=str, default=None)
+    parser.add_argument("--batch_size", type=int, default=1)
 
     return parser.parse_args()

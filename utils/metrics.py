@@ -14,7 +14,7 @@ rouge_metric = evaluate.load('rouge', trust_remote_code=True)
 bert_score = evaluate.load('bertscore', trust_remote_code=True)
 
 
-def compute_experts_metrics(labels, predictions):
+def compute_generation_metrics(labels, predictions):
 
     bleu_output = bleu_metric.compute(
         predictions=predictions, references=labels, max_order=1)['bleu']

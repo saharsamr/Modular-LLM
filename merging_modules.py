@@ -2,13 +2,22 @@ from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     BitsAndBytesConfig,
+    pipeline,
 )
+from datasets import load_dataset
 import torch
+from torch.utils.data import DataLoader
 
+from tqdm import tqdm
 
 from utils.arg_parser import experts_merging_arg_parser
 from merging_lora_modules.simple_averaging import SimpleAveraging
 from merging_lora_modules.xlora_average import XLoraAveraging
+from data_handler.dataset import (
+    apply_preprocessing,
+    create_message_column_for_test
+)
+from utils.metrics import compute_generation_metrics
 from utils.config import *
 
 
@@ -31,10 +40,36 @@ if __name__ == "__main__":
 
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
+        expert_merger.merge()
     elif args.merging_strategy == 'xlora_average':
-        expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
+        if args.checkpoint_path:
+            expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
+            expert_merger.merge(load_path=args.checkpoint_path)
+        else:
+            expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
+            expert_merger.merge()
     else:
         raise f'{args.merging_strategy} is not supported.'
 
-    expert_merger.merge()
     model = expert_merger.get_model()
+
+    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
+
+    routing_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")
+    routing_test_dataset = apply_preprocessing(routing_dataset['test'], create_message_column_for_test, tokenizer)
+
+    test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
+    references, predictions = [], []
+    for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
+        outputs = pipe(batch['text'], max_new_tokens=100)
+        preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+
+        references.extend(batch['target'])
+        predictions.extend(preds)
+
+    metrics = compute_generation_metrics(references, predictions)
+    print('=' * 100)
+    print('BLEU:', metrics['bleu'])
+    print('ROUGE:', metrics['rouge'])
+    print('BERTSCORE:', metrics['bertscore'])
+    print('=' * 100)

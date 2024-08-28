@@ -20,7 +20,9 @@ class XLoraAveraging(BaseMergingModule):
 
     def merge(self, load_path=None):
         if load_path:
-            pass
+            self.base_model = xlora.from_pretrained(
+                load_path, self.base_model, cluster_checkpoint_names
+            )
         else:
             self.load_lora_modules()
             self.train()
