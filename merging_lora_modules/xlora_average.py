@@ -71,7 +71,7 @@ class XLoraAveraging(BaseMergingModule):
         )
 
         trainer = SFTTrainer(
-            model=self.model,
+            model=self.base_model,
             train_dataset=routing_train_dataset,
             eval_dataset=routing_validation_dataset,
             dataset_text_field='text',
