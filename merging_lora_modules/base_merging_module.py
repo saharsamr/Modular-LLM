@@ -19,7 +19,7 @@ cluster_checkpoint_names = {
 
 
 class BaseMergingModule:
-    def __init__(self, base_model, model_name):
+    def __init__(self, base_model, tokenizer, model_name):
         self.base_model = base_model
         self.model_name = model_name
         self.base_model_config = AutoConfig.from_pretrained(
@@ -29,10 +29,7 @@ class BaseMergingModule:
             device_map="auto",
         )
         self.max_length = MAX_LENGTH
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name, use_fast=True, padding_side='right', model_max_length=self.max_length
-        )
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        self.tokenizer = tokenizer
 
     def merge(self):
         raise NotImplementedError

@@ -5,8 +5,8 @@ from merging_lora_modules.base_merging_module import (
 
 
 class SimpleAveraging(BaseMergingModule):
-    def __init__(self, base_model, model_name):
-        super().__init__(base_model, model_name)
+    def __init__(self, base_model, tokenizer, model_name):
+        super().__init__(base_model, tokenizer, model_name)
 
     def merge(self):
         self.load_lora_modules()

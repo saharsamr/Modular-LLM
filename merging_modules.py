@@ -8,6 +8,7 @@ import torch
 
 from utils.arg_parser import experts_merging_arg_parser
 from merging_lora_modules.simple_averaging import SimpleAveraging
+from merging_lora_modules.xlora_average import XLoraAveraging
 from utils.config import *
 
 
@@ -28,8 +29,12 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
 
-    expert_merger = SimpleAveraging(model)
+    if args.merging_strategy == "simple_average":
+        expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
+    elif args.mering_strategy == 'xlora_average':
+        expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
+    else:
+        raise f'{args.merging_strategy} is not supported.'
+
     expert_merger.merge()
     model = expert_merger.get_model()
-
-
