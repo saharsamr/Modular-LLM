@@ -55,8 +55,12 @@ if __name__ == "__main__":
 
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
-    routing_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")
-    routing_test_dataset = apply_preprocessing(routing_dataset['test'], create_message_column_for_test, tokenizer)
+    routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
+    routing_test_dataset = routing_test_dataset.map(create_message_column_for_test)
+    routing_test_dataset = routing_test_dataset.map(
+        lambda sample:
+        {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
+    )
 
     test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
     references, predictions = [], []
