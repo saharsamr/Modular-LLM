@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
-    elif args.mering_strategy == 'xlora_average':
+    elif args.merging_strategy == 'xlora_average':
         expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
     else:
         raise f'{args.merging_strategy} is not supported.'
