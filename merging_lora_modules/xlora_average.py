@@ -26,6 +26,7 @@ class XLoraAveraging(BaseMergingModule):
             self.train()
 
     def load_lora_modules(self):
+        self.base_model.config.use_cache = False
         self.base_model = xlora.add_xlora_to_model(
             model=self.base_model,
             xlora_config=xlora.xLoRAConfig(
@@ -47,17 +48,15 @@ class XLoraAveraging(BaseMergingModule):
 
         training_arguments = TrainingArguments(
             output_dir='./results/MoE-XLoRA',
-            num_train_epochs=4,
-            per_device_train_batch_size=16,
-            per_device_eval_batch_size=16,
-            gradient_accumulation_steps=2,
-            # max_grad_norm=2.0,
-            # gradient_checkpointing=True,
+            num_train_epochs=1,
+            per_device_train_batch_size=1,
+            per_device_eval_batch_size=1,
+            gradient_accumulation_steps=16,
+            max_grad_norm=2.0,
+            gradient_checkpointing=True,
             learning_rate=1e-4,
-            # weight_decay=args.weight_decay,
-            optim='adamw',
+            optim='paged_adamw_8bit',
             lr_scheduler_type='linear',
-            # warmup_ratio=args.warmup_ratio,
             group_by_length=False,
             save_steps=200,
             logging_steps=100,

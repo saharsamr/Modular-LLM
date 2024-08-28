@@ -21,6 +21,7 @@ cluster_checkpoint_names = {
 class BaseMergingModule:
     def __init__(self, base_model, tokenizer, model_name):
         self.base_model = base_model
+        self.base_model.enable_input_require_grads()
         self.model_name = model_name
         self.base_model_config = AutoConfig.from_pretrained(
             self.model_name,
