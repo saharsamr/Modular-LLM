@@ -1,6 +1,7 @@
 from peft import PeftModel
+from transformers import AutoTokenizer, AutoConfig
 
-from utils.config import EXPERTS_FOLDER_PATH
+from utils.config import EXPERTS_FOLDER_PATH, MAX_LENGTH
 
 
 cluster_checkpoint_names = {
@@ -18,8 +19,20 @@ cluster_checkpoint_names = {
 
 
 class BaseMergingModule:
-    def __init__(self, base_model):
+    def __init__(self, base_model, model_name):
         self.base_model = base_model
+        self.model_name = model_name
+        self.base_model_config = AutoConfig.from_pretrained(
+            self.model_name,
+            trust_remote_code=True,
+            use_flash_attention_2=False,
+            device_map="auto",
+        )
+        self.max_length = MAX_LENGTH
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name, use_fast=True, padding_side='right', model_max_length=self.max_length
+        )
+        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
     def merge(self):
         raise NotImplementedError

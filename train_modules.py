@@ -3,9 +3,7 @@ import random
 import wandb
 import numpy as np
 import torch
-from transformers import (
-    TrainingArguments
-)
+from transformers import TrainingArguments
 
 from utils.arg_parser import experts_training_arg_parser
 from models.module_trainer import LoraModuleTrainer
