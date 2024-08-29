@@ -25,7 +25,7 @@ if __name__ == "__main__":
     set_seed(args.seed)
 
     run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
-    wandb.init(project=args.project_name, name=run_name)
+    wandb.init(project=args.project_name+'_v2', name=run_name)
     wandb.config.update(dict(vars(args)), allow_val_change=True)
 
     training_arguments = TrainingArguments(
