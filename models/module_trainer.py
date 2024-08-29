@@ -48,6 +48,7 @@ class LoraModuleTrainer:
             torch_dtype=torch.float16,
             quantization_config=self.bnb_config
         )
+        self.base_model.enable_input_require_grads()
 
         self.loftq_config = LoftQConfig(loftq_bits=4)
         self.lora_config = LoraConfig(
