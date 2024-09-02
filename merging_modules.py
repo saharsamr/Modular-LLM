@@ -62,6 +62,8 @@ if __name__ == "__main__":
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
     routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
+    routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
+        else routing_test_dataset.train_test_split(test_size=1-args.data_portion)['train']
     routing_test_dataset = routing_test_dataset.map(create_message_column_for_test)
     routing_test_dataset = routing_test_dataset.map(
         lambda sample:
