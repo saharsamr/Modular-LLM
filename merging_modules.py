@@ -56,6 +56,7 @@ if __name__ == "__main__":
 
     elif args.merging_strategy == 'phi3':
         pass
+    
     else:
         raise f'{args.merging_strategy} is not supported.'
 
