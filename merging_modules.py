@@ -41,17 +41,23 @@ if __name__ == "__main__":
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
         expert_merger.merge()
+        model = expert_merger.get_model()
+
     elif args.merging_strategy == 'xlora_average':
+
         if args.checkpoint_path:
             expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
             expert_merger.merge(load_path=args.checkpoint_path)
+            model = expert_merger.get_model()
         else:
             expert_merger = XLoraAveraging(model, tokenizer, args.model_name)
             expert_merger.merge()
+            model = expert_merger.get_model()
+
+    elif args.merging_strategy == 'phi3':
+        pass
     else:
         raise f'{args.merging_strategy} is not supported.'
-
-    model = expert_merger.get_model()
 
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
