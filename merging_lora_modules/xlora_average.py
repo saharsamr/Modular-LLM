@@ -15,8 +15,9 @@ from data_handler.dataset import (
 
 
 class XLoraAveraging(BaseMergingModule):
-    def __init__(self, base_model, tokenizer, model_name):
+    def __init__(self, base_model, tokenizer, model_name, data_portion):
         super().__init__(base_model, tokenizer, model_name)
+        self.data_portion = data_portion
 
     def merge(self, load_path=None):
         if load_path:
@@ -44,9 +45,14 @@ class XLoraAveraging(BaseMergingModule):
     def train(self):
         routing_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")
 
-        routing_train_dataset = apply_preprocessing(routing_dataset['train'], create_message_column, self.tokenizer)
+        routing_train_dataset = routing_dataset['train'] if self.data_portion == 1.0 \
+            else routing_dataset['train'].train_test_split(test_size=1-self.data_portion)['train']
+        routing_train_dataset = apply_preprocessing(routing_train_dataset, create_message_column, self.tokenizer)
+
+        routing_validation_dataset = routing_dataset['validation'] if self.data_portion == 1.0 \
+            else routing_dataset['validation'].train_test_split(test_size=1-self.data_portion)['train']
         routing_validation_dataset = apply_preprocessing(
-            routing_dataset['validation'], create_message_column, self.tokenizer)
+            routing_validation_dataset, create_message_column, self.tokenizer)
 
         training_arguments = TrainingArguments(
             output_dir='./results/MoE-XLoRA',
