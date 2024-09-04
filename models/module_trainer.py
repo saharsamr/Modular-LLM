@@ -12,7 +12,10 @@ from peft import (
 )
 from trl import SFTTrainer
 
-from data_handler.dataset import create_message_column
+from data_handler.dataset import (
+    create_message_column,
+    apply_preprocessing
+)
 from utils.config import *
 
 
@@ -66,19 +69,8 @@ class LoraModuleTrainer:
         self.model.config.use_cache = False
 
     def train(self, train_data, eval_data, training_args):
-        train_data = train_data.map(create_message_column)
-        train_data = train_data.map(
-            lambda sample:
-            {"text": self.tokenizer.apply_chat_template(
-                sample["messages"], add_generation_prompt=False, tokenize=False)}
-        )
-
-        eval_data = eval_data.map(create_message_column)
-        eval_data = eval_data.map(
-            lambda sample:
-            {"text": self.tokenizer.apply_chat_template(
-                sample["messages"], add_generation_prompt=False, tokenize=False)}
-        )
+        train_data = apply_preprocessing(train_data, create_message_column, self.tokenizer)
+        eval_data = apply_preprocessing(eval_data, create_message_column, self.tokenizer)
 
         trainer = SFTTrainer(
             model=self.model,
