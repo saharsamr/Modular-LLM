@@ -7,7 +7,7 @@ from transformers import TrainingArguments
 
 from utils.arg_parser import experts_training_arg_parser
 from models.module_trainer import LoraModuleTrainer
-from data_handler.dataset import read_dataset
+from data_handler.dataset import read_dataset, read_LE_dataset
 from utils.config import *
 
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     args = experts_training_arg_parser()
     set_seed(args.seed)
 
-    run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
+    run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion) + '_lang' + str(args.language)
     wandb.init(project=args.project_name, name=run_name)
     wandb.config.update(dict(vars(args)), allow_val_change=True)
 
@@ -59,7 +59,12 @@ if __name__ == "__main__":
         max_length=MAX_LENGTH
     )
 
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+    train_data, eval_data =  None, None
+
+    if args.language_expert == False:
+    	train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+    else:
+	    train_data, eval_data = read_LE_dataset(args.le_train_json_path, args.le_test_json_path, return_test=False)
 
     module_trainer.train(
         train_data=train_data,

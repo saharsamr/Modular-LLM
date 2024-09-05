@@ -3,6 +3,8 @@ import pyarrow.dataset as pds
 import pyarrow.compute as pc
 import random
 
+import pandas as pd
+
 
 def effective_filter(ds, expr):
     """
@@ -140,6 +142,40 @@ def read_dataset(ds_name, cluster_idx, data_portion, return_test):
     val_ds = val_ds if data_portion == 1.0 else val_ds.train_test_split(test_size=1-data_portion)['train']
 
     return train_ds, val_ds
+
+
+def read_LE_dataset(ds_train, ds_test, return_test):
+    df = pd.read_json(ds_train)
+    df = df.rename(columns={'prompt': 'source', 'completion': 'target'})
+    df.to_json('le_train.json', orient='records')
+
+    df = pd.read_json(ds_test)
+    df = df.rename(columns={'prompt': 'source', 'completion': 'target'})
+    df.to_json('le_test.json', orient='records') 
+
+
+    train_ds = load_dataset('json', data_files='le_train.json')
+    test_ds = load_dataset('json', data_files='le_test.json')
+    # print(test_ds)
+    train_validation_split = train_ds['train'].train_test_split(test_size=0.1)
+
+    # Get the new training and validation sets
+    train_dataset = DatasetDict({'train': train_validation_split['train']})
+    val_ds = DatasetDict({'train': train_validation_split['test']})
+
+    # Define a function to add 'train' column with None values
+    def add_train_column(example):
+        example['train'] = None
+        return example
+
+    train_dataset['train'] = train_dataset['train'].map(add_train_column)
+    val_ds['train'] = val_ds['train'].map(add_train_column)
+    test_ds['train'] = test_ds['train'].map(add_train_column)
+
+    if return_test:
+        return test_ds['train']
+
+    return train_dataset['train'], val_ds['train']
 
 
 def create_message_column(row):
