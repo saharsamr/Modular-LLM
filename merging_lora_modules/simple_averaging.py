@@ -13,7 +13,7 @@ class SimpleAveraging(BaseMergingModule):
         adapter_names = list(cluster_checkpoint_names.keys())
         self.base_model.add_weighted_adapter(
             adapters=adapter_names,
-            weights=[1/len(adapter_names) for _ in adapter_names],
+            weights=[0.01 for _ in adapter_names],
             combination_type='linear',
             adapter_name='simple_average'
         )

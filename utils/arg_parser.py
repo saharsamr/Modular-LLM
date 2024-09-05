@@ -64,5 +64,6 @@ def experts_merging_arg_parser():
     parser.add_argument("--checkpoint_path", type=str, default=None)
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--data_portion", type=float, default=1.0)
+    parser.add_argument("--seed", type=int, default=1234)
 
     return parser.parse_args()

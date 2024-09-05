@@ -9,6 +9,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from tqdm import tqdm
+import random
+import numpy as np
 
 from utils.arg_parser import experts_merging_arg_parser
 from merging_lora_modules.simple_averaging import SimpleAveraging
@@ -21,8 +23,16 @@ from utils.metrics import compute_generation_metrics
 from utils.config import *
 
 
+def set_seed(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
 if __name__ == "__main__":
     args = experts_merging_arg_parser()
+    set_seed(args.seed)
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
