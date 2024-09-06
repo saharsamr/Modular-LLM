@@ -64,7 +64,7 @@ if __name__ == "__main__":
     if args.language_expert == False:
     	train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
     else:
-	    train_data, eval_data = read_LE_dataset(args.le_train_json_path, args.le_test_json_path, return_test=False)
+    	train_data, eval_data = read_LE_dataset(args.le_train_json_path, args.le_test_json_path, return_test=False)
 
     module_trainer.train(
         train_data=train_data,
