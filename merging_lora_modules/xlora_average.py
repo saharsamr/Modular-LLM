@@ -41,6 +41,8 @@ class XLoraAveraging(BaseMergingModule):
             ),
             verbose=True,
         )
+        print(self.base_model)
+        
 
     def train(self):
         routing_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")
