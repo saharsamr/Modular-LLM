@@ -6,7 +6,7 @@ from transformers import AutoConfig, TrainingArguments
 from datasets import load_dataset
 from trl import SFTTrainer
 
-import xlora
+from xlora.src.xlora import xlora
 import torch
 from data_handler.dataset import (
     create_message_column,
