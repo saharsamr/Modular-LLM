@@ -131,9 +131,15 @@ class xLoRAClassifier(nn.Module):
             batch_size = typing.cast(torch.FloatTensor, inputs_embeds).shape[0]
 
         if input_ids is not None:
-            seq_len = input_ids.shape[1]
+            # seq_len = input_ids.shape[1]
+
+            # make the model sample-level instead of token-level
+            seq_len = 1
         else:
-            seq_len = typing.cast(torch.FloatTensor, inputs_embeds).shape[1]
+            # seq_len = typing.cast(torch.FloatTensor, inputs_embeds).shape[1]
+
+            # make the model sample-level instead of token-level
+            seq_len = 1
 
         # For type checking
         model: PeftModel = self.model  # type: ignore
