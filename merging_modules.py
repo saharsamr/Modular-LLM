@@ -15,6 +15,7 @@ import numpy as np
 from utils.arg_parser import experts_merging_arg_parser
 from merging_lora_modules.simple_averaging import SimpleAveraging
 from merging_lora_modules.xlora_average import XLoraAveraging
+from merging_lora_modules.arrow_routing import ArrowRouting
 from data_handler.dataset import (
     apply_preprocessing,
     create_message_column_for_test
@@ -63,6 +64,11 @@ if __name__ == "__main__":
             expert_merger = XLoraAveraging(model, tokenizer, args.model_name, args.data_portion)
             expert_merger.merge()
             model = expert_merger.get_model()
+    
+    elif args.merging_strategy == 'arrow_routing':
+        expert_merger = ArrowRouting(model, tokenizer, args.model_name)
+        expert_merger.routing_function()
+        raise NotImplementedError
 
     elif args.merging_strategy == 'phi3':
         pass
