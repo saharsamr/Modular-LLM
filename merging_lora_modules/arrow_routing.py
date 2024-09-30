@@ -8,6 +8,33 @@ from torch import nn
 class ArrowRouting(BaseMergingModule):
     def __init__(self, base_model, tokenizer, model_name):
         super().__init__(base_model, tokenizer, model_name)
+        
+
+    def _low_rank_svd(self, A, B):
+        """Faster SVD computation for low rank matrices"""
+
+        # Compute SVD of A
+        U_A, Sigma_A, V_A = torch.svd(A)
+
+        # Compute SVD of B.T (transpose of B)
+        U_B, Sigma_B, V_B = torch.svd(B.T)
+
+        # Compute product matrix C = Sigma_A * (V_A.T @ V_B) * Sigma_B
+        # Since V_A and V_B are orthogonal, their product is also an orthogonal matrix
+        C = Sigma_A.diag_embed() @ V_A.t() @ V_B @ Sigma_B.diag_embed()
+
+        # Compute SVD of the product matrix C
+        U_C, Sigma_C, V_C = torch.svd(C)
+
+        # Construct the final SVD components of W
+        U_W = U_A @ U_C
+        V_W_T = V_C.t() @ U_B.t()
+
+        diff_AB = (U_W.T @ U_A).abs().diag()
+        if diff_AB[0] < 0.9:
+            print("The first singular vector of U_A and U_AB are not aligned")
+
+        return U_W, Sigma_C, V_W_T
     
 
     def routing_function(self):
@@ -58,7 +85,53 @@ class ArrowRouting(BaseMergingModule):
         
         # TODO: Computing prototype using SVD and then finding coefficients.
 
-                
-        
+        vectors_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
+        eigvals_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
 
+        for layer in all_lora_dict.keys():
+            for cluster in all_lora_dict[layer]['lora_A'].keys():
 
+                A = all_lora_dict[layer]['lora_A'][cluster]
+                # A = [tensor.tolist() for tensor in A.values()]
+
+                B = all_lora_dict[layer]['lora_B'][cluster]
+                # B = [tensor.tolist() for tensor in B.values()]
+
+                # print(torch.tensor(A).size())
+                # print(torch.tensor(B).size())
+
+                # A = torch.cat(torch.tensor(A), dim=1)
+                # B = torch.cat(torch.tensor(B), dim=0)
+
+                # rank = 4
+
+                # A = A.reshape(-1, rank).float()
+                # B = B.reshape(rank, -1).float()
+
+                W = (A @ B).T  # out_features, in_features
+
+                U_W, Sigma_W, _ = self._low_rank_svd(A, B)
+                top_value = Sigma_W[0] ** 2
+                bottom_vector = U_W[:, -1]
+                top_vector = U_W[:, 0]
+
+                # Check that top vector is indeed an eigenvector
+                WTW = W.T @ W
+                ratio = WTW @ top_vector / (top_vector * top_value)
+                torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
+
+                # Check that top vector is indeed the top eigenvector
+                assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                    2
+                ).sum()
+
+                # Save eigenvector and eigvenvalue
+                vectors_dict[layer][cluster] = top_vector.detach().cpu().numpy()
+                eigvals_dict[layer][cluster] = top_value.item()
+
+        print(vectors_dict, eigvals_dict)
+
+        return vectors_dict, eigvals_dict
+
+    def get_model(self, vectors_dict):
+        pass
