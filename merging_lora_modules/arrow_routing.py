@@ -103,9 +103,9 @@ class CustomPeftModel(PeftModel):
                         eigvals_dict[cluster] = top_value.item()
                         scores[cluster] = top_vector.detach().cpu().numpy() * layer_input_h
 
-                    # logits based on the scores and select k-top experts. average k-top experts based on scores.
+                    # TODO: logits based on the scores and select k-top experts. average k-top experts based on scores.
 
-                    # define output of layer based on merge of experts
+                    # TODO: define output of layer based on merge of experts
 
 
 
