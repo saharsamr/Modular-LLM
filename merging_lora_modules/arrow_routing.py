@@ -245,7 +245,7 @@ class ArrowRouting(BaseMergingModule):
         experts_prototypes, eigvals_dict = self.routing_function()
 
         # Creating CustomModel
-        self.base_model = CustomModel(experts_prototypes, k)
+        self.base_model = CustomModel(self.base_model, experts_prototypes, k)
 
 
 
