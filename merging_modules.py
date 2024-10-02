@@ -67,8 +67,8 @@ if __name__ == "__main__":
     
     elif args.merging_strategy == 'arrow_routing':
         expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-        vectors_dict, eigvals_dict = expert_merger.routing_function()
-        model = expert_merger.get_model(vectors_dict)
+        # vectors_dict, eigvals_dict = expert_merger.routing_function()
+        model = expert_merger.merge(k=3)
         raise NotImplementedError
 
     elif args.merging_strategy == 'phi3':

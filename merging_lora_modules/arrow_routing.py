@@ -3,37 +3,52 @@ from peft.tuners.lora.layer import LoraLayer
 import torch
 from tensordict.tensordict import TensorDict
 from torch import nn
-from peft import PeftModel
+import numpy as np
 
 class CustomModel(nn.Module):
-    def __init__(self, base_model, cluster_checkpoint_names, experts_prototypes, k=1):
+    def __init__(self, base_model, experts_prototypes, k=1):
         super().__init__()
-        # Load the base model with the first cluster (default LoRA adapter)
-        self.base_model = PeftModel.from_pretrained(
-            base_model, cluster_checkpoint_names['cluster0'], adapter_name='cluster0')
+        # # Load the base model with the first cluster (default LoRA adapter)
+        # self.base_model = PeftModel.from_pretrained(
+        #     base_model, cluster_checkpoint_names['cluster0'], adapter_name='cluster0')
         
-        # Load additional experts (LoRA adapters)
-        for cluster_name, cluster_path in cluster_checkpoint_names.items():
-            if cluster_name != 'cluster0':
-                self.base_model.load_adapter(cluster_path, adapter_name=cluster_name)
+        # # Load additional experts (LoRA adapters)
+        # for cluster_name, cluster_path in cluster_checkpoint_names.items():
+        #     if cluster_name != 'cluster0':
+        #         self.base_model.load_adapter(cluster_path, adapter_name=cluster_name)
         
+        # base_model is already loaded with adapters.
+        self.base_model = base_model
         # Store the expert mapping for each layer
         self.experts_prototypes = experts_prototypes
         self.k = k
 
     def expert_mapping(self, layer_index, current_input):
-
+        """
+        This function computes the coefficients for each expert in each layer.
+        """
+        # Computing logits
         logits = {}
-        for key in experts_prototypes[layer_index].keys():
-            logits[key] = torch.abs(torch.dot(experts_prototypes[layer_index][key], current_input))
+        for expert_name in self.experts_prototypes[layer_index].keys():
+            logits[expert_name] = torch.abs(torch.dot(self.experts_prototypes[layer_index][expert_name], current_input))
 
-        # Sort the dictionary by values and get the top k items
-        top_k = sorted(logits.items(), key=lambda item: item[1], reverse=True)[:self.k]
+        # Sort the logits based on the values and return a dict
+        sorted_logits = dict(sorted(logits.items(), key=lambda item: item[1], reverse=True))
 
-        # Extract keys and values from top_k
-        top_k_keys = [item[0] for item in top_k]
+        # Select top_k and set others as -infinity
+        for i, (k, v) in enumerate(sorted_logits.items()):
+            if i < self.k:
+                sorted_logits[k] = v
+            else:
+                sorted_logits[k] = -np.inf
 
-        return top_k_keys
+        # Applying softmax
+        def softmax_on_dict(logits_dict):
+            x = np.fromiter(logits_dict.values(), dtype=float)
+            softmax_scores = np.exp(x) / np.sum(np.exp(x), axis=0)
+            return logits_dict.update(zip(logits_dict, softmax_scores))
+
+        return softmax_on_dict(sorted_logits)
         
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None):
@@ -42,46 +57,49 @@ class CustomModel(nn.Module):
         
         # Iterate through each layer and apply the corresponding expert
         for layer_index, layer in enumerate(self.base_model.model.layers):
-            # Select the expert based on the mapping for the current layer
-            expert_index = self.expert_mapping(layer_index, current_input)
+            # Computing the weights for the corresponding layer
+            weights = self.expert_mapping(layer_index, current_input)
 
-            # Switch to the specific LoRA expert for this layer
-            self.base_model.set_adapter(f'cluster{expert_index}')
+            # TODO: Multiplying weights with experts
+            print(layer) # To see what's the structure of the layer
 
-            # Perform the forward pass for this layer using the current input
-            output = layer(current_input, attention_mask=attention_mask, token_type_ids=token_type_ids)
+            # # Switch to the specific LoRA expert for this layer
+            # self.base_model.set_adapter(f'cluster{expert_index}')
 
-            # Update the input for the next layer to be the output of the current layer
-            current_input = output
+            # # Perform the forward pass for this layer using the current input
+            # output = layer(current_input, attention_mask=attention_mask, token_type_ids=token_type_ids)
+
+            # # Update the input for the next layer to be the output of the current layer
+            # current_input = output
 
         # Return the final output after passing through all layers
         return current_input
 
 
-class CustomPeftModel(PeftModel):
-    def __init__(self, base_model, peft_config):
-        super().__init__(base_model, peft_config)
+# class CustomPeftModel(PeftModel):
+#     def __init__(self, base_model, peft_config):
+#         super().__init__(base_model, peft_config)
 
-    def set_layer_expert():
-        pass
+#     def set_layer_expert():
+#         pass
 
-    def forward(self, *args, **kwargs):
-        # Iterate through each layer and apply the corresponding expert
-        for layer_index, layer in enumerate(self.base_model.model.layers):
-            # Select the expert based on the mapping for the current layer
-            expert_index = self.expert_mapping[layer_index]
+#     def forward(self, *args, **kwargs):
+#         # Iterate through each layer and apply the corresponding expert
+#         for layer_index, layer in enumerate(self.base_model.model.layers):
+#             # Select the expert based on the mapping for the current layer
+#             expert_index = self.expert_mapping[layer_index]
 
-            # Switch to the specific LoRA expert for this layer
-            self.base_model.set_adapter(f'cluster{expert_index}')
+#             # Switch to the specific LoRA expert for this layer
+#             self.base_model.set_adapter(f'cluster{expert_index}')
 
-            # Perform the forward pass for this layer
-            output = layer(*args, **kwargs)
+#             # Perform the forward pass for this layer
+#             output = layer(*args, **kwargs)
             
-            # Process the output (you may need to modify this based on your model structure)
-            # Example: you may want to store or process the output here
+#             # Process the output (you may need to modify this based on your model structure)
+#             # Example: you may want to store or process the output here
         
-        # Continue the rest of the forward pass as usual
-        return output
+#         # Continue the rest of the forward pass as usual
+#         return output
 
 
 class ArrowRouting(BaseMergingModule):
@@ -124,11 +142,13 @@ class ArrowRouting(BaseMergingModule):
     
 
     def routing_function(self):
+        """
+        This is the function responsible for computing prototype of the experts.
+        The prototypes will be passed to the CustomModel class as the argument to the cunstructor
+        """
+
         # We first load the lora modules
         self.load_lora_modules()
-        # # Then we iterate on the adapters on the base model.
-        # print(self.base_model)
-        # print('='*50)
         
         proj_counter = 0
         all_lora_dict = {}
@@ -168,8 +188,6 @@ class ArrowRouting(BaseMergingModule):
                 proj_counter += 1
         
         print(all_lora_dict)
-        
-        # TODO: Computing prototype using SVD and then finding coefficients.
 
         vectors_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
         eigvals_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
@@ -219,5 +237,17 @@ class ArrowRouting(BaseMergingModule):
 
         return vectors_dict, eigvals_dict
 
-    def get_model(self, vectors_dict):
-        return CustomModel(self.base_model, cluster_checkpoint_names, vectors_dict)
+    def merge(self, k):
+        """
+        This function completely does the merging and return the model with new merged adapters
+        """
+        # Computing prototypes
+        experts_prototypes, eigvals_dict = self.routing_function()
+
+        # Creating CustomModel
+        self.base_model = CustomModel(experts_prototypes, k)
+
+
+
+
+
