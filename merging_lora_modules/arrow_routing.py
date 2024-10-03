@@ -6,7 +6,7 @@ from torch import nn
 import numpy as np
 
 class CustomModel(nn.Module):
-    def __init__(self, base_model, experts_prototypes, k=1):
+    def __init__(self, base_model, base_model_config, experts_prototypes, k=1):
         super().__init__()
         # # Load the base model with the first cluster (default LoRA adapter)
         # self.base_model = PeftModel.from_pretrained(
@@ -21,7 +21,14 @@ class CustomModel(nn.Module):
         self.base_model = base_model
         # Store the expert mapping for each layer
         self.experts_prototypes = experts_prototypes
+        # k_best expert that we wanna use
         self.k = k
+        # Necessary attributes for pipeline()
+        self.config = base_model_config
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    def can_generate(self):
+        return False
 
     def expert_mapping(self, layer_index, current_input):
         """
@@ -60,6 +67,8 @@ class CustomModel(nn.Module):
             # Computing the weights for the corresponding layer
             weights = self.expert_mapping(layer_index, current_input)
 
+            print(weights)
+            print('='*30)
             # TODO: Multiplying weights with experts
             print(layer) # To see what's the structure of the layer
 
@@ -187,7 +196,7 @@ class ArrowRouting(BaseMergingModule):
 
                 proj_counter += 1
         
-        print(all_lora_dict)
+        # print(all_lora_dict)
 
         vectors_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
         eigvals_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
@@ -245,7 +254,7 @@ class ArrowRouting(BaseMergingModule):
         experts_prototypes, eigvals_dict = self.routing_function()
 
         # Creating CustomModel
-        self.base_model = CustomModel(self.base_model, experts_prototypes, k)
+        self.base_model = CustomModel(self.base_model, self.base_model_config, experts_prototypes, k)
 
 
 

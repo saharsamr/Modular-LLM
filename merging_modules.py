@@ -70,14 +70,13 @@ if __name__ == "__main__":
         # vectors_dict, eigvals_dict = expert_merger.routing_function()
         expert_merger.merge(k=3)
         model = expert_merger.get_model()
-        raise NotImplementedError
 
     elif args.merging_strategy == 'phi3':
         pass
 
     else:
         raise f'{args.merging_strategy} is not supported.'
-
+    
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
 
     routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
