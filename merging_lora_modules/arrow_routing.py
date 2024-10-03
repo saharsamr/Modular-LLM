@@ -5,6 +5,8 @@ from tensordict.tensordict import TensorDict
 from torch import nn
 import numpy as np
 
+from transformers import GenerationConfig
+
 class CustomModel(nn.Module):
     def __init__(self, base_model, base_model_config, experts_prototypes, k=1):
         super().__init__()
@@ -25,10 +27,13 @@ class CustomModel(nn.Module):
         self.k = k
         # Necessary attributes for pipeline()
         self.config = base_model_config
+
+        # Adding generation_config attribute
+        self.generation_config = GenerationConfig.from_pretrained(base_model_config._name_or_path)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     def can_generate(self):
-        return False
+        return True
 
     def expert_mapping(self, layer_index, current_input):
         """
@@ -72,17 +77,20 @@ class CustomModel(nn.Module):
             # TODO: Multiplying weights with experts
             print(layer) # To see what's the structure of the layer
 
-            # # Switch to the specific LoRA expert for this layer
+            # Switch to the specific LoRA expert for this layer
             # self.base_model.set_adapter(f'cluster{expert_index}')
 
-            # # Perform the forward pass for this layer using the current input
-            # output = layer(current_input, attention_mask=attention_mask, token_type_ids=token_type_ids)
+            # Perform the forward pass for this layer using the current input
+            output = layer(current_input, attention_mask=attention_mask, token_type_ids=token_type_ids)
 
-            # # Update the input for the next layer to be the output of the current layer
-            # current_input = output
+            # Update the input for the next layer to be the output of the current layer
+            current_input = output
 
         # Return the final output after passing through all layers
         return current_input
+
+    def generate(self, input_ids, attention_mask, pad_token_id='', eos_token_id='', max_new_tokens=50, max_length=50, num_beams=5, do_sample=True, top_p=0.9, temperature=0.8, num_return_sequences=3):
+      return input_ids
 
 
 # class CustomPeftModel(PeftModel):
