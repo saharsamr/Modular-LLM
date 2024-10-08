@@ -1,4 +1,11 @@
-from peft import PeftModel
+import sys
+import os
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# from peft import PeftModel
+from local_peft import PeftModel
 from transformers import AutoTokenizer, AutoConfig
 
 from utils.config import EXPERTS_FOLDER_PATH, MAX_LENGTH
@@ -16,6 +23,8 @@ cluster_checkpoint_names = {
     'cluster8': f'{EXPERTS_FOLDER_PATH}/cluster8_batch1_prop0.2/checkpoint-2320/',
     'cluster9': f'{EXPERTS_FOLDER_PATH}/cluster9_batch1_prop0.2/checkpoint-2053/',
 }
+
+
 
 
 class BaseMergingModule:

@@ -1,5 +1,12 @@
+import sys
+import os
+
+# Add the parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
-from peft.tuners.lora.layer import LoraLayer
+# from peft.tuners.lora.layer import LoraLayer
+from local_peft.tuners.lora.layer import LoraLayer
 import torch
 from tensordict.tensordict import TensorDict
 from torch import nn

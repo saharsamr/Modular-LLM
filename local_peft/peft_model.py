@@ -38,7 +38,7 @@ from transformers import PreTrainedModel
 from transformers.modeling_outputs import QuestionAnsweringModelOutput, SequenceClassifierOutput, TokenClassifierOutput
 from transformers.utils import PushToHubMixin
 
-from peft.utils.constants import DUMMY_MODEL_CONFIG, PEFT_TYPE_TO_PREFIX_MAPPING
+from local_peft.utils.constants import DUMMY_MODEL_CONFIG, PEFT_TYPE_TO_PREFIX_MAPPING
 
 from . import __version__
 from .config import PeftConfig
@@ -151,6 +151,9 @@ class PeftModel(PushToHubMixin, torch.nn.Module):
         low_cpu_mem_usage: bool = False,
     ) -> None:
         super().__init__()
+
+        print('************** LOCAL PEFT **************')
+
         self.modules_to_save = None
         self.active_adapter = adapter_name
         self.peft_type = peft_config.peft_type
