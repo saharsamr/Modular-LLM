@@ -25,8 +25,6 @@ cluster_checkpoint_names = {
 }
 
 
-
-
 class BaseMergingModule:
     def __init__(self, base_model, tokenizer, model_name):
         self.base_model = base_model

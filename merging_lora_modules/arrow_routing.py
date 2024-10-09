@@ -97,6 +97,7 @@ class CustomModel(nn.Module):
         return current_input
 
     def generate(self, input_ids, attention_mask, pad_token_id='', eos_token_id='', max_new_tokens=50, max_length=50, num_beams=5, do_sample=True, top_p=0.9, temperature=0.8, num_return_sequences=3):
+      self.forward()
       return input_ids
 
 
@@ -129,13 +130,6 @@ class CustomModel(nn.Module):
 class ArrowRouting(BaseMergingModule):
     def __init__(self, base_model, tokenizer, model_name):
         super().__init__(base_model, tokenizer, model_name)
-
-    # def load_lora_modules(self):
-    #     self.base_model = CustomPeftModel.from_pretrained(
-    #         self.base_model, cluster_checkpoint_names['cluster0'], adapter_name='cluster0')
-    #     for cluster_name, cluster_path in cluster_checkpoint_names.items():
-    #         if cluster_name != 'cluster0':
-    #             self.base_model.load_adapter(cluster_path, adapter_name=cluster_name)
         
 
     def _low_rank_svd(self, A, B):
@@ -263,13 +257,12 @@ class ArrowRouting(BaseMergingModule):
 
     def merge(self, k):
         """
-        This function completely does the merging and return the model with new merged adapters
+        This function completely does the merging
         """
         # Computing prototypes
         experts_prototypes, eigvals_dict = self.routing_function()
 
-        # Creating CustomModel
-        self.base_model = CustomModel(self.base_model, self.base_model_config, experts_prototypes, k)
+        
 
 
 

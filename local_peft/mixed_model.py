@@ -23,7 +23,7 @@ from accelerate.hooks import remove_hook_from_submodules
 from torch import nn
 from transformers.utils import PushToHubMixin
 
-from peft.utils.constants import DUMMY_MODEL_CONFIG
+from local_peft.utils.constants import DUMMY_MODEL_CONFIG
 
 from .config import PeftConfig
 from .peft_model import PeftModel

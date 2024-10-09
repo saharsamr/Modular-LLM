@@ -31,15 +31,15 @@ from torch import nn
 from transformers import PreTrainedModel
 from transformers.pytorch_utils import Conv1D
 
-from peft.utils import INCLUDE_LINEAR_LAYERS_SHORTHAND
-from peft.utils.constants import (
+from local_peft.utils import INCLUDE_LINEAR_LAYERS_SHORTHAND
+from local_peft.utils.constants import (
     DUMMY_MODEL_CONFIG,
     DUMMY_TARGET_MODULES,
     EMBEDDING_LAYER_NAMES,
     MIN_TARGET_MODULES_FOR_OPTIMIZATION,
     SEQ_CLS_HEAD_NAMES,
 )
-from peft.utils.peft_types import PeftType, TaskType
+from local_peft.utils.peft_types import PeftType, TaskType
 
 from ..config import PeftConfig
 from ..utils import ModulesToSaveWrapper, _get_submodules

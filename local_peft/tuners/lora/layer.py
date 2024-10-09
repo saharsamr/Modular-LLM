@@ -24,9 +24,9 @@ from accelerate.utils.imports import is_xpu_available
 from torch import svd_lowrank
 from transformers.pytorch_utils import Conv1D
 
-from peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
-from peft.utils.integrations import dequantize_module_weight, gather_params_ctx, get_bnb_param_type
-from peft.utils.other import transpose
+from local_peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
+from local_peft.utils.integrations import dequantize_module_weight, gather_params_ctx, get_bnb_param_type
+from local_peft.utils.other import transpose
 
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraConv3dLayer, DoraEmbeddingLayer, DoraLinearLayer, _DoraConvNdLayer
@@ -362,6 +362,8 @@ class LoraLayer(BaseTunerLayer):
         result = self.base_layer(x, *args, **kwargs)
         torch_result_dtype = result.dtype
 
+        print('************** Batch Forward is called ****************')
+
         unique_adapters = set(adapter_names)
         sub_batch_indices_list = []
         for adapter in unique_adapters:
@@ -561,6 +563,7 @@ class Linear(nn.Module, LoraLayer):
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
+        print('============= Simple LoRA forward is called ===============')
 
         if self.disable_adapters:
             if self.merged:

@@ -70,6 +70,7 @@ if __name__ == "__main__":
         # vectors_dict, eigvals_dict = expert_merger.routing_function()
         expert_merger.merge(k=3)
         model = expert_merger.get_model()
+        # print(model)
 
     elif args.merging_strategy == 'phi3':
         pass
