@@ -420,6 +420,8 @@ if is_bnb_4bit_available():
             # extra argument that allows mixing different adapters in the same batch at inference time.
             result = self.base_layer(x, *args, **kwargs)
 
+            print('Entering _mixed_batch_forward() ...')
+
             unique_adapters = set(adapter_names)
             sub_batch_indices_list = []
             for adapter in unique_adapters:
@@ -454,6 +456,7 @@ if is_bnb_4bit_available():
         def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:
             self._check_forward_args(x, *args, **kwargs)
             adapter_names = kwargs.pop("adapter_names", None)
+            compute_arrow_weights = kwargs.pop("compute_arrow_weights", None)
 
             if self.disable_adapters:
                 if self.merged:
@@ -464,6 +467,8 @@ if is_bnb_4bit_available():
             elif self.merged:
                 result = self.base_layer(x, *args, **kwargs)
             else:
+                if compute_arrow_weights == True:
+                    print('****** Computing Arrow Weights ******')
                 result = self.base_layer(x, *args, **kwargs)
                 # As per Tim Dettmers, for 4bit, we need to defensively clone here.
                 # The reason is that in some cases, an error can occur that backprop

@@ -89,11 +89,35 @@ if __name__ == "__main__":
         {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
     )
 
-    test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
+    test_dataloader = DataLoader(routing_test_dataset, batch_size=1 if args.merging_strategy == 'arrow_routing' else args.batch_size)
     references, predictions = [], []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
+        # print(batch)
+        # print('='*40)
+        # print('Calling forward path on the model:')
+        # tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
+        # model(**tokenised_batch)
+        # print('='*40)
+        # print('Output of model with pipeline:')
+        # outputs = pipe(batch['text'], max_new_tokens=100)
+        # preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+        # print(preds)
+        # print('='*40)
+        # print('Calling generate method on the model:')
+        # generated_ids = model.generate(**tokenised_batch, max_new_tokens=100)
+        # preds = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        # print(preds)
+
+        # raise NotImplementedError
+
+        print('Calling forward path on the model:')
+        tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
+        model(**tokenised_batch, compute_arrow_weights=True)
+
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+        print(preds)
+        raise NotImplementedError
 
         references.extend(batch['target'])
         predictions.extend(preds)
