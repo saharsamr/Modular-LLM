@@ -12,124 +12,13 @@ from tensordict.tensordict import TensorDict
 from torch import nn
 import numpy as np
 
-from transformers import GenerationConfig
-
-class CustomModel(nn.Module):
-    def __init__(self, base_model, base_model_config, experts_prototypes, k=1):
-        super().__init__()
-        # # Load the base model with the first cluster (default LoRA adapter)
-        # self.base_model = PeftModel.from_pretrained(
-        #     base_model, cluster_checkpoint_names['cluster0'], adapter_name='cluster0')
-        
-        # # Load additional experts (LoRA adapters)
-        # for cluster_name, cluster_path in cluster_checkpoint_names.items():
-        #     if cluster_name != 'cluster0':
-        #         self.base_model.load_adapter(cluster_path, adapter_name=cluster_name)
-        
-        # base_model is already loaded with adapters.
-        self.base_model = base_model
-        # Store the expert mapping for each layer
-        self.experts_prototypes = experts_prototypes
-        # k_best expert that we wanna use
-        self.k = k
-        # Necessary attributes for pipeline()
-        self.config = base_model_config
-
-        # Adding generation_config attribute
-        self.generation_config = GenerationConfig.from_pretrained(base_model_config._name_or_path)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    def can_generate(self):
-        return True
-
-    def expert_mapping(self, layer_index, current_input):
-        """
-        This function computes the coefficients for each expert in each layer.
-        """
-        # Computing logits
-        logits = {}
-        for expert_name in self.experts_prototypes[layer_index].keys():
-            logits[expert_name] = torch.abs(torch.dot(self.experts_prototypes[layer_index][expert_name], current_input))
-
-        # Sort the logits based on the values and return a dict
-        sorted_logits = dict(sorted(logits.items(), key=lambda item: item[1], reverse=True))
-
-        # Select top_k and set others as -infinity
-        for i, (k, v) in enumerate(sorted_logits.items()):
-            if i < self.k:
-                sorted_logits[k] = v
-            else:
-                sorted_logits[k] = -np.inf
-
-        # Applying softmax
-        def softmax_on_dict(logits_dict):
-            x = np.fromiter(logits_dict.values(), dtype=float)
-            softmax_scores = np.exp(x) / np.sum(np.exp(x), axis=0)
-            return logits_dict.update(zip(logits_dict, softmax_scores))
-
-        return softmax_on_dict(sorted_logits)
-        
-
-    def forward(self, input_ids, attention_mask=None, token_type_ids=None):
-        # Initial input is the input_ids from the text
-        current_input = input_ids
-        
-        # Iterate through each layer and apply the corresponding expert
-        for layer_index, layer in enumerate(self.base_model.model.layers):
-            # Computing the weights for the corresponding layer
-            weights = self.expert_mapping(layer_index, current_input)
-
-            print(weights)
-            print('='*30)
-            # TODO: Multiplying weights with experts
-            print(layer) # To see what's the structure of the layer
-
-            # Switch to the specific LoRA expert for this layer
-            # self.base_model.set_adapter(f'cluster{expert_index}')
-
-            # Perform the forward pass for this layer using the current input
-            output = layer(current_input, attention_mask=attention_mask, token_type_ids=token_type_ids)
-
-            # Update the input for the next layer to be the output of the current layer
-            current_input = output
-
-        # Return the final output after passing through all layers
-        return current_input
-
-    def generate(self, input_ids, attention_mask, pad_token_id='', eos_token_id='', max_new_tokens=50, max_length=50, num_beams=5, do_sample=True, top_p=0.9, temperature=0.8, num_return_sequences=3):
-      self.forward()
-      return input_ids
-
-
-# class CustomPeftModel(PeftModel):
-#     def __init__(self, base_model, peft_config):
-#         super().__init__(base_model, peft_config)
-
-#     def set_layer_expert():
-#         pass
-
-#     def forward(self, *args, **kwargs):
-#         # Iterate through each layer and apply the corresponding expert
-#         for layer_index, layer in enumerate(self.base_model.model.layers):
-#             # Select the expert based on the mapping for the current layer
-#             expert_index = self.expert_mapping[layer_index]
-
-#             # Switch to the specific LoRA expert for this layer
-#             self.base_model.set_adapter(f'cluster{expert_index}')
-
-#             # Perform the forward pass for this layer
-#             output = layer(*args, **kwargs)
-            
-#             # Process the output (you may need to modify this based on your model structure)
-#             # Example: you may want to store or process the output here
-        
-#         # Continue the rest of the forward pass as usual
-#         return output
-
 
 class ArrowRouting(BaseMergingModule):
     def __init__(self, base_model, tokenizer, model_name):
         super().__init__(base_model, tokenizer, model_name)
+
+        # We load all the adapters
+        self.load_lora_modules()
         
 
     def _low_rank_svd(self, A, B):
@@ -158,7 +47,6 @@ class ArrowRouting(BaseMergingModule):
 
         return U_W, Sigma_C, V_W_T
     
-
     def routing_function(self):
         """
         This is the function responsible for computing prototype of the experts.
@@ -262,7 +150,6 @@ class ArrowRouting(BaseMergingModule):
         # Computing prototypes
         experts_prototypes, eigvals_dict = self.routing_function()
 
-        
 
 
 

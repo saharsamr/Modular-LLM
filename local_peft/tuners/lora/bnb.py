@@ -19,13 +19,14 @@ from typing import Any, Optional
 import bitsandbytes as bnb
 import torch
 
-from peft.import_utils import is_bnb_4bit_available, is_bnb_available
-from peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
-from peft.utils.integrations import dequantize_bnb_weight
-from peft.utils.other import transpose
+from local_peft.import_utils import is_bnb_4bit_available, is_bnb_available
+from local_peft.tuners.tuners_utils import BaseTunerLayer, check_adapters_to_merge
+from local_peft.utils.integrations import dequantize_bnb_weight
+from local_peft.utils.other import transpose
 
 from .layer import LoraLayer
 
+from merging_lora_modules.base_merging_module import cluster_checkpoint_names
 
 if is_bnb_available():
 
@@ -468,7 +469,18 @@ if is_bnb_4bit_available():
                 result = self.base_layer(x, *args, **kwargs)
             else:
                 if compute_arrow_weights == True:
+                    # We compute the arrow weights here, and create a new adapter in each layer w.r.t the weights.
+                    # Then we set the new adapter as the only active_adapter, and obtain the output of the layer.
                     print('****** Computing Arrow Weights ******')
+
+                    if self.base_layer.out_features == 3072:
+                        # The layer is o_proj
+                        
+                        for adapter_name in cluster_checkpoint_names.keys():
+                            #TODO: Finding the prototype and weights.
+                            return NotImplementedError
+
+
                 result = self.base_layer(x, *args, **kwargs)
                 # As per Tim Dettmers, for 4bit, we need to defensively clone here.
                 # The reason is that in some cases, an error can occur that backprop

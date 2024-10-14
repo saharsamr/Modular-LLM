@@ -66,11 +66,15 @@ if __name__ == "__main__":
             model = expert_merger.get_model()
     
     elif args.merging_strategy == 'arrow_routing':
-        expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-        # vectors_dict, eigvals_dict = expert_merger.routing_function()
-        expert_merger.merge(k=3)
-        model = expert_merger.get_model()
+        # expert_merger = ArrowRouting(model, tokenizer, args.model_name)
+        # # vectors_dict, eigvals_dict = expert_merger.routing_function()
+        # expert_merger.merge(k=3)
+        # model = expert_merger.get_model()
         # print(model)
+
+        # ًWe only load the model with all the adapters here, the merging will be done inside the model's layer
+        expert_merger = ArrowRouting(model, tokenizer, args.model_name)
+        model = expert_merger.get_model()
 
     elif args.merging_strategy == 'phi3':
         pass
@@ -92,28 +96,11 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(routing_test_dataset, batch_size=1 if args.merging_strategy == 'arrow_routing' else args.batch_size)
     references, predictions = [], []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
-        # print(batch)
-        # print('='*40)
-        # print('Calling forward path on the model:')
-        # tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-        # model(**tokenised_batch)
-        # print('='*40)
-        # print('Output of model with pipeline:')
-        # outputs = pipe(batch['text'], max_new_tokens=100)
-        # preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
-        # print(preds)
-        # print('='*40)
-        # print('Calling generate method on the model:')
-        # generated_ids = model.generate(**tokenised_batch, max_new_tokens=100)
-        # preds = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-        # print(preds)
-
-        # raise NotImplementedError
-
-        print('Calling forward path on the model:')
+        # Calling the model's forward path to apply Arrow Routing
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
         model(**tokenised_batch, compute_arrow_weights=True)
 
+        # Generate the answer using the new adapter
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
         print(preds)
