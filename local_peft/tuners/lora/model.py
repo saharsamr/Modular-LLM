@@ -56,10 +56,11 @@ from .layer import Conv2d, LoraLayer, dispatch_default
 from .tp_layer import dispatch_megatron
 
 
-def _adapter_names_pre_forward_hook(target, args, kwargs, adapter_names, compute_arrow_weights):
+def _adapter_names_pre_forward_hook(target, args, kwargs, adapter_names, compute_arrow_weights, top_k):
     # pre-forward hook to inject the adapter_names argument when using mixed adapter batches inference
     kwargs["adapter_names"] = adapter_names
     kwargs['compute_arrow_weights'] = compute_arrow_weights
+    kwargs['top_k'] = top_k
     return args, kwargs
 
 
@@ -426,10 +427,11 @@ class LoraModel(BaseTuner):
 
     @contextmanager
     def _enable_peft_forward_hooks(self, *args, **kwargs):
-        # If adapter_names or compute_arrow_weights is passed as an argument, we inject it into the forward arguments.
+        # If adapter_names or compute_arrow_weights and top_k is passed as an argument, we inject it into the forward arguments.
         adapter_names = kwargs.pop("adapter_names", None)
         compute_arrow_weights = kwargs.pop("compute_arrow_weights", None)
-        if (adapter_names is None) and (compute_arrow_weights is None):
+        top_k = kwargs.pop("top_k", None)
+        if (adapter_names is None) and (compute_arrow_weights is None) and (top_k is None):
             # nothing to do
             yield
             return
@@ -440,7 +442,8 @@ class LoraModel(BaseTuner):
         hook_handles = []
         for module in self.modules():
             if isinstance(module, LoraLayer) or isinstance(module, ModulesToSaveWrapper):
-                pre_forward = partial(_adapter_names_pre_forward_hook, adapter_names=adapter_names, compute_arrow_weights=compute_arrow_weights)
+                pre_forward = partial(_adapter_names_pre_forward_hook, adapter_names=adapter_names,
+                                       compute_arrow_weights=compute_arrow_weights, top_k=top_k)
                 handle = module.register_forward_pre_hook(pre_forward, with_kwargs=True)
                 hook_handles.append(handle)
 

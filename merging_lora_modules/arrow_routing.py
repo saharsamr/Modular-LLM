@@ -151,7 +151,65 @@ class ArrowRouting(BaseMergingModule):
         experts_prototypes, eigvals_dict = self.routing_function()
 
 
+def _low_rank_svd(A, B):
+    """Faster SVD computation for low rank matrices"""
 
+    # Compute SVD of A
+    U_A, Sigma_A, V_A = torch.svd(A)
+
+    # Compute SVD of B.T (transpose of B)
+    U_B, Sigma_B, V_B = torch.svd(B.T)
+
+    # Compute product matrix C = Sigma_A * (V_A.T @ V_B) * Sigma_B
+    # Since V_A and V_B are orthogonal, their product is also an orthogonal matrix
+    C = Sigma_A.diag_embed() @ V_A.t() @ V_B @ Sigma_B.diag_embed()
+
+    # Compute SVD of the product matrix C
+    U_C, Sigma_C, V_C = torch.svd(C)
+
+    # Construct the final SVD components of W
+    U_W = U_A @ U_C
+    V_W_T = V_C.t() @ U_B.t()
+
+    diff_AB = (U_W.T @ U_A).abs().diag()
+    if diff_AB[0] < 0.9:
+        print("The first singular vector of U_A and U_AB are not aligned")
+
+    return U_W, Sigma_C, V_W_T
+
+
+def compute_weight(current_input, experts_prototypes, top_k):
+    """
+    This function computes the coefficients for each expert in each layer.
+    """
+    # Computing logits
+    logits = {}
+    for expert_name in experts_prototypes.keys():
+        # current_input shape is: (batch, token_num, 3072)
+        # experts_prototypes[expert_name] shape is: (3072)
+        logits[expert_name] = torch.abs(torch.einsum('btd,d->bt', current_input.to(torch.float32), experts_prototypes[expert_name]))
+        # logits[expert_name] shape is: (batch, token_num)
+
+    print(logits)
+    ## TODO: finding top_k experts for each token
+    
+    # Sort the logits based on the values and return a dict
+    sorted_logits = dict(sorted(logits.items(), key=lambda item: item[1], reverse=True))
+
+    # Select top_k and set others as -infinity
+    for i, (k, v) in enumerate(sorted_logits.items()):
+        if i < top_k:
+            sorted_logits[k] = v
+        else:
+            sorted_logits[k] = -np.inf
+
+    # Applying softmax
+    def softmax_on_dict(logits_dict):
+        x = np.fromiter(logits_dict.values(), dtype=float)
+        softmax_scores = np.exp(x) / np.sum(np.exp(x), axis=0)
+        return logits_dict.update(zip(logits_dict, softmax_scores))
+
+    return softmax_on_dict(sorted_logits)
 
 
 

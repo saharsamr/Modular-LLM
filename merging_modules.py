@@ -98,7 +98,7 @@ if __name__ == "__main__":
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         # Calling the model's forward path to apply Arrow Routing
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-        model(**tokenised_batch, compute_arrow_weights=True)
+        model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
 
         # Generate the answer using the new adapter
         outputs = pipe(batch['text'], max_new_tokens=100)

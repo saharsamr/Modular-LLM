@@ -27,6 +27,7 @@ from local_peft.utils.other import transpose
 from .layer import LoraLayer
 
 from merging_lora_modules.base_merging_module import cluster_checkpoint_names
+from merging_lora_modules.arrow_routing import _low_rank_svd, compute_weight
 
 if is_bnb_available():
 
@@ -458,6 +459,7 @@ if is_bnb_4bit_available():
             self._check_forward_args(x, *args, **kwargs)
             adapter_names = kwargs.pop("adapter_names", None)
             compute_arrow_weights = kwargs.pop("compute_arrow_weights", None)
+            top_k = kwargs.pop("top_k", None)
 
             if self.disable_adapters:
                 if self.merged:
@@ -473,13 +475,35 @@ if is_bnb_4bit_available():
                     # Then we set the new adapter as the only active_adapter, and obtain the output of the layer.
                     print('****** Computing Arrow Weights ******')
 
-                    if self.base_layer.out_features == 3072:
-                        # The layer is o_proj
+                    experts_prototype = {}
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        A = self.lora_A[adapter_name].weight.T 
+                        B = self.lora_B[adapter_name].weight.T 
                         
-                        for adapter_name in cluster_checkpoint_names.keys():
-                            #TODO: Finding the prototype and weights.
-                            return NotImplementedError
+                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                        W = (A @ B).T  # out_features, in_features
 
+                        U_W, Sigma_W, _ = _low_rank_svd(A, B)
+                        top_value = Sigma_W[0] ** 2
+                        bottom_vector = U_W[:, -1]
+                        top_vector = U_W[:, 0]
+
+                        # Check that top vector is indeed an eigenvector
+                        WTW = W.T @ W
+                        ratio = WTW @ top_vector / (top_vector * top_value)
+                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
+
+                        # Check that top vector is indeed the top eigenvector
+                        assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                            2
+                        ).sum()
+                        
+                        experts_prototype[adapter_name] = top_vector.detach()
+
+                    arrow_weights = compute_weight(x, experts_prototype, top_k)
+                    print('Resulted arrow weights for top_k experts are:')
+                    print(arrow_weights)
+                    print('='*40)
 
                 result = self.base_layer(x, *args, **kwargs)
                 # As per Tim Dettmers, for 4bit, we need to defensively clone here.
