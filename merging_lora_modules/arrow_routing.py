@@ -182,34 +182,32 @@ def compute_weight(current_input, experts_prototypes, top_k):
     """
     This function computes the coefficients for each expert in each layer.
     """
+
     # Computing logits
     logits = {}
-    for expert_name in experts_prototypes.keys():
+    logits_mat = torch.zeros(len(experts_prototypes.keys()), current_input.shape[0], current_input.shape[1])
+    for i, expert_name in enumerate(experts_prototypes.keys()):
         # current_input shape is: (batch, token_num, 3072)
         # experts_prototypes[expert_name] shape is: (3072)
-        logits[expert_name] = torch.abs(torch.einsum('btd,d->bt', current_input.to(torch.float32), experts_prototypes[expert_name]))
-        # logits[expert_name] shape is: (batch, token_num)
+        # logits_mat[expert_name] shape is: (batch, token_num)
+        logits_mat[i] = torch.abs(torch.einsum('btd,d->bt', current_input.to(torch.float32), experts_prototypes[expert_name]))
 
-    print(logits)
-    ## TODO: finding top_k experts for each token
+    # convert logits to a matrix with shape: (batch, token_num, experts)
+    logits_mat = logits_mat.permute(1,2,0)
     
-    # Sort the logits based on the values and return a dict
-    sorted_logits = dict(sorted(logits.items(), key=lambda item: item[1], reverse=True))
+    # Get the top k values and their indices along the last dim
+    top_k_values, top_k_indices = torch.topk(logits_mat, top_k, dim=-1)
 
-    # Select top_k and set others as -infinity
-    for i, (k, v) in enumerate(sorted_logits.items()):
-        if i < top_k:
-            sorted_logits[k] = v
-        else:
-            sorted_logits[k] = -np.inf
+    # Create an output matrix filled with -inf
+    output_matrix = torch.full_like(logits_mat, -float('inf'))
 
-    # Applying softmax
-    def softmax_on_dict(logits_dict):
-        x = np.fromiter(logits_dict.values(), dtype=float)
-        softmax_scores = np.exp(x) / np.sum(np.exp(x), axis=0)
-        return logits_dict.update(zip(logits_dict, softmax_scores))
+    # Scatter the top k values into their respective positions in the output matrix
+    output_matrix.scatter_(-1, top_k_indices, top_k_values)
 
-    return softmax_on_dict(sorted_logits)
+    # Apply softmax
+    softmax = torch.nn.Softmax(dim=-1)
+
+    return softmax(output_matrix)
 
 
 

@@ -100,10 +100,10 @@ if __name__ == "__main__":
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
         model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
 
-        # Generate the answer using the new adapter
-        outputs = pipe(batch['text'], max_new_tokens=100)
-        preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
-        print(preds)
+        # # Generate the answer using the new adapter
+        # outputs = pipe(batch['text'], max_new_tokens=100)
+        # preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+        # print(preds)
         raise NotImplementedError
 
         references.extend(batch['target'])

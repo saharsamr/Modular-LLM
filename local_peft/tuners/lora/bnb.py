@@ -503,7 +503,17 @@ if is_bnb_4bit_available():
                     arrow_weights = compute_weight(x, experts_prototype, top_k)
                     print('Resulted arrow weights for top_k experts are:')
                     print(arrow_weights)
+                    print(arrow_weights.shape)
                     print('='*40)
+
+                    # Now we should complete the forward path w.r.t the corresponding weights:
+
+                    result = self.base_layer(x, *args, **kwargs)
+                    result = result.clone()
+
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        
+
 
                 result = self.base_layer(x, *args, **kwargs)
                 # As per Tim Dettmers, for 4bit, we need to defensively clone here.
