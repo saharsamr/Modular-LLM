@@ -172,8 +172,8 @@ def _low_rank_svd(A, B):
     V_W_T = V_C.t() @ U_B.t()
 
     diff_AB = (U_W.T @ U_A).abs().diag()
-    if diff_AB[0] < 0.9:
-        print("The first singular vector of U_A and U_AB are not aligned")
+    # if diff_AB[0] < 0.9:
+    #     print("The first singular vector of U_A and U_AB are not aligned")
 
     return U_W, Sigma_C, V_W_T
 
@@ -184,7 +184,6 @@ def compute_weight(current_input, experts_prototypes, top_k):
     """
 
     # Computing logits
-    logits = {}
     logits_mat = torch.zeros(len(experts_prototypes.keys()), current_input.shape[0], current_input.shape[1])
     for i, expert_name in enumerate(experts_prototypes.keys()):
         # current_input shape is: (batch, token_num, 3072)

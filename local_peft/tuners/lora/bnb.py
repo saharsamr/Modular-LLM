@@ -313,6 +313,10 @@ if is_bnb_4bit_available():
                 use_dora=use_dora,
             )
 
+            self.token_gen_counter = 0
+            self.merged_lora_A = None
+            self.merged_lora_B = None
+
         def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
             """
             Merge the active adapter weights into the base weights
@@ -473,7 +477,8 @@ if is_bnb_4bit_available():
                 if compute_arrow_weights == True:
                     # We compute the arrow weights here, and create a new adapter in each layer w.r.t the weights.
                     # Then we set the new adapter as the only active_adapter, and obtain the output of the layer.
-                    print('****** Computing Arrow Weights ******')
+                    # print('****** Computing Arrow Weights ******')
+                    # print(self.token_gen_counter)
 
                     experts_prototype = {}
                     for adapter_name in cluster_checkpoint_names.keys():
@@ -500,57 +505,104 @@ if is_bnb_4bit_available():
                         
                         experts_prototype[adapter_name] = top_vector.detach()
 
-                    arrow_weights = compute_weight(x, experts_prototype, top_k)
-                    print('Resulted arrow weights for top_k experts are:')
-                    print(arrow_weights)
-                    print(arrow_weights.shape)
-                    print('='*40)
+                    arrow_weights = compute_weight(x, experts_prototype, top_k).to(device='cuda:0')
 
-                    # Now we should complete the forward path w.r.t the corresponding weights:
+                    weighted_adapter_mat_A = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
+                                                        x.shape[1], self.base_layer.in_features , 4)
+                    weighted_adapter_mat_B = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
+                                                        x.shape[1], 4, self.base_layer.out_features)
+                    for i, adapter_name in enumerate(cluster_checkpoint_names.keys()):
+                        lora_A = self.lora_A[adapter_name].weight
+                        lora_B = self.lora_B[adapter_name].weight
 
-                    result = self.base_layer(x, *args, **kwargs)
-                    result = result.clone()
+                        lora_A_per_tok = torch.einsum('bt,dr->btdr', arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_A.T)
+                        lora_B_per_tok = torch.einsum('bt,rd->btrd',arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_B.T)
+                        weighted_adapter_mat_A[i] = lora_A_per_tok
+                        weighted_adapter_mat_B[i] = lora_B_per_tok
+                
+                    # Now we take sum along expert dimension
+                    self.merged_lora_A = torch.sum(weighted_adapter_mat_A, dim=0)
+                    self.merged_lora_B = torch.sum(weighted_adapter_mat_B, dim=0)
+                    
 
-                    for adapter_name in cluster_checkpoint_names.keys():
-                        
-
-
+                # Now we should complete the forward path w.r.t the corresponding weights:
                 result = self.base_layer(x, *args, **kwargs)
-                # As per Tim Dettmers, for 4bit, we need to defensively clone here.
-                # The reason is that in some cases, an error can occur that backprop
-                # does not work on a manipulated view. This issue may be solved with
-                # newer PyTorch versions but this would need extensive testing to be
-                # sure.
                 result = result.clone()
 
-                for active_adapter in self.active_adapters:
-                    if active_adapter not in self.lora_A.keys():
-                        continue
-                    lora_A = self.lora_A[active_adapter]
-                    lora_B = self.lora_B[active_adapter]
-                    dropout = self.lora_dropout[active_adapter]
-                    scaling = self.scaling[active_adapter]
+                # Initialising scaling and dropout for the new adapter
+                scaling = self.scaling['cluster0']
+                dropout = torch.nn.Dropout(p=0.05, inplace=False)
+                
+                requires_conversion = not torch.is_autocast_enabled()
+                if requires_conversion:
+                    expected_dtype = result.dtype
+                    x = x.to(self.merged_lora_A.dtype)
+                
+                x = dropout(x)
+                # x shape is: (batch, token_num, model_dim)
+                # lora_A shape is: (batch, token_num, model_dim, rank)
+                # lora_B shape is: (batch, token_num, rank, model_dim)
+                if result.shape[1] == 1:
+                    ## Generation case
+                    # x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A[:, self.token_gen_counter].unsqueeze(1).to(device='cuda:0'))
+                    # x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B[:, self.token_gen_counter].unsqueeze(1).to(device='cuda:0'))
+                    # self.token_gen_counter += 1
+                    # if self.token_gen_counter >= self.merged_lora_A.shape[1]:
+                    #     self.token_gen_counter = 0
+                    x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.mean(1, True).to(device='cuda:0'))
+                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.mean(1, True).to(device='cuda:0')) 
 
-                    requires_conversion = not torch.is_autocast_enabled()
-                    if requires_conversion:
-                        expected_dtype = result.dtype
-                        x = x.to(lora_A.weight.dtype)
+                else:
+                    x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.to(device='cuda:0'))
+                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.to(device='cuda:0')) 
 
-                    if not self.use_dora[active_adapter]:
-                        output = lora_B(lora_A(dropout(x))) * scaling
-                    else:
-                        x = dropout(x)
-                        output = self.lora_magnitude_vector[active_adapter](
-                            x,
-                            lora_A=lora_A,
-                            lora_B=lora_B,
-                            scaling=scaling,
-                            base_layer=self.get_base_layer(),
-                        )
-                    if requires_conversion:
-                        output = output.to(expected_dtype)
+                output = x * scaling
 
-                    result = result + output
+                if requires_conversion:
+                    output = output.to(expected_dtype)
+
+                # print('result shape is: {}'.format(result.shape))
+                # print('output shape is: {}'.format(output.shape))
+                result = result + output
+
+                # result = self.base_layer(x, *args, **kwargs)
+                # # As per Tim Dettmers, for 4bit, we need to defensively clone here.
+                # # The reason is that in some cases, an error can occur that backprop
+                # # does not work on a manipulated view. This issue may be solved with
+                # # newer PyTorch versions but this would need extensive testing to be
+                # # sure.
+                # result = result.clone()
+
+                # for active_adapter in self.active_adapters:
+                #     if active_adapter not in self.lora_A.keys():
+                #         continue
+                #     lora_A = self.lora_A[active_adapter]
+                #     lora_B = self.lora_B[active_adapter]
+                #     dropout = self.lora_dropout[active_adapter]
+                #     scaling = self.scaling[active_adapter]
+
+                #     requires_conversion = not torch.is_autocast_enabled()
+                #     if requires_conversion:
+                #         expected_dtype = result.dtype
+                #         x = x.to(lora_A.weight.dtype)
+
+                #     if not self.use_dora[active_adapter]:
+                #         output = lora_B(lora_A(dropout(x))) * scaling
+                #     else:
+                #         x = dropout(x)
+                #         output = self.lora_magnitude_vector[active_adapter](
+                #             x,
+                #             lora_A=lora_A,
+                #             lora_B=lora_B,
+                #             scaling=scaling,
+                #             base_layer=self.get_base_layer(),
+                #         )
+                #     if requires_conversion:
+                #         output = output.to(expected_dtype)
+
+                #     # print('result shape is: {}'.format(result.shape))
+                #     # print('output shape is: {}'.format(output.shape))
+                #     result = result + output
 
             return result
 

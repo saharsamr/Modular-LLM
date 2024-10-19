@@ -82,7 +82,7 @@ if __name__ == "__main__":
     else:
         raise f'{args.merging_strategy} is not supported.'
     
-    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
+    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True, padding=True)
 
     routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
     routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
@@ -93,18 +93,17 @@ if __name__ == "__main__":
         {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
     )
 
-    test_dataloader = DataLoader(routing_test_dataset, batch_size=1 if args.merging_strategy == 'arrow_routing' else args.batch_size)
+    test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
     references, predictions = [], []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         # Calling the model's forward path to apply Arrow Routing
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
         model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
 
-        # # Generate the answer using the new adapter
-        # outputs = pipe(batch['text'], max_new_tokens=100)
-        # preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
-        # print(preds)
-        raise NotImplementedError
+        # Generate the answer using the new adapter
+        outputs = pipe(batch['text'], max_new_tokens=100)
+        preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+        print(preds)
 
         references.extend(batch['target'])
         predictions.extend(preds)
