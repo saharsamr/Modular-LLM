@@ -129,7 +129,20 @@ if __name__ == "__main__":
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
 
-        references.extend(batch['target'])
+        if args.dataset_name == 'piqa':
+            references.extend(batch['label'])
+        if args.dataset_name == 'boolq':
+            references.extend(batch['answer'])
+        if args.dataset_name == 'swag':
+            references.extend(batch['label'])
+        if (args.dataset_name == 'arc-challenge') or (args.dataset_name == 'arc-easy'):
+            references.extend(batch['answerKey'])
+        if args.dataset_name == 'oqa':
+            references.extend(batch['answers']['text'][0])
+        if args.dataset_name == 'bbh':
+            references.extend(batch['target'])
+        if args.dataset_name == 'flan':
+            references.extend(batch['target'])
         predictions.extend(preds)
         print(batch['target'], ' || ', preds)
 
