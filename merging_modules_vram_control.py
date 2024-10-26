@@ -111,12 +111,9 @@ if __name__ == "__main__":
         # print(batch['text'])
 
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-        
-        print(len(tokenised_batch['input_ids'][0]))
 
         if len(tokenised_batch['input_ids'][0]) > 1500:
             continue
-
         if len(references) > 20:
             break
 
@@ -144,7 +141,7 @@ if __name__ == "__main__":
         if args.dataset_name == 'flan':
             references.extend(batch['target'])
         predictions.extend(preds)
-        print(batch['target'], ' || ', preds)
+        print(references[-1], ' || ', preds)
 
         # del strategy_model
         # del pipe
