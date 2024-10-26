@@ -105,7 +105,7 @@ if __name__ == "__main__":
     )
 
     test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
-    references, predictions = [], []
+    inputs, references, predictions = [], [], []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         # Calling the model's forward path to apply Arrow Routing
 
@@ -151,9 +151,14 @@ if __name__ == "__main__":
         #     references.extend(batch['target'])
         # if args.dataset_name == 'flan':
         #     references.extend(batch['target'])
+
         references.extend([map_output_to_desired_target(args.dataset_name, batch)])
         predictions.extend(preds)
-        print(references[-1], ' || ', preds)
+        inputs.extend(batch['text'])
+        print(batch['text'])
+        print(references[-1])
+        print(preds)
+        print('==============')
 
         # del strategy_model
         # del pipe
