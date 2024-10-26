@@ -23,6 +23,8 @@ def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/SaylorTwift/bbh
     elif ds_name == 'bbh':
         ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train')
+    elif ds_name == 'flan':
+        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
     else:
         raise f"Dataset {ds_name} is not supported yet."
 
@@ -46,6 +48,8 @@ def create_user_content(ds_name, row):
         return f"[context]{row['context']}\n[question]{row['question']}\n"
     if ds_name == 'bbh':
         return f"[question]{row['input']}\n"
+    if ds_name == 'flan':
+        return f"{row['source']}"
 
 
 def create_assistant_target(ds_name, row):
@@ -60,25 +64,32 @@ def create_assistant_target(ds_name, row):
     if ds_name == 'oqa':
         return f"{row['answers']['text'][0]}"
     if ds_name == 'bbh':
-        return f"{row['target']}"
+        return f"{row['target']}\n"
+    if ds_name == 'flan':
+        return f"{row['target']}\n"
 
 
-def create_fewshot_message(ds_name, row):
+def create_few_shot_message(ds_name, sample_rows, question_row):
     messages = []
-    user = {
-        "content": create_user_content(ds_name, row),
+    for row in sample_rows:
+        user = {
+            "content": create_user_content(ds_name, row),
+            "role": "user"
+        }
+        messages.append(user)
+        assistant = {
+            "content": create_assistant_target(ds_name, row),
+            "role": "assistant"
+        }
+        messages.append(assistant)
+    messages.append({
+        "content": create_user_content(ds_name, question_row),
         "role": "user"
-    }
-    messages.append(user)
-    assistant = {
-        "content": create_assistant_target(ds_name, row),
-        "role": "assistant"
-    }
-    messages.append(assistant)
+    })
     return {"messages": messages}
 
 
-def create_test_shot_message(ds_name, row):
+def create_zero_shot_message(ds_name, row):
     messages = []
     user = {
         "content": create_user_content(ds_name, row),

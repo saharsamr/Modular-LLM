@@ -65,5 +65,12 @@ def experts_merging_arg_parser():
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument(
+        "--dataset_name", type=str, required=True,
+        choices=[
+            'piqa', 'boolq', 'swag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan'
+        ]
+    )
+    parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
 
     return parser.parse_args()

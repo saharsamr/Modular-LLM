@@ -4,7 +4,6 @@ from transformers import (
     BitsAndBytesConfig,
     pipeline,
 )
-from datasets import load_dataset
 import torch
 from torch.utils.data import DataLoader
 
@@ -16,9 +15,10 @@ from utils.arg_parser import experts_merging_arg_parser
 from merging_lora_modules.simple_averaging import SimpleAveraging
 from merging_lora_modules.xlora_average import XLoraAveraging
 from merging_lora_modules.arrow_routing import ArrowRouting
-from data_handler.dataset import (
-    apply_preprocessing,
-    create_message_column_for_test
+from data_handler.test_datasets import (
+    read_test_dataset,
+    create_zero_shot_message,
+    create_few_shot_message
 )
 from utils.metrics import compute_generation_metrics
 from utils.config import *
@@ -87,10 +87,16 @@ if __name__ == "__main__":
     
     pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
 
-    routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
+    routing_test_dataset = read_test_dataset(args.dataset_name)
+
+    # routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
     routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
         else routing_test_dataset.train_test_split(test_size=1-args.data_portion)['train']
-    routing_test_dataset = routing_test_dataset.map(create_message_column_for_test)
+    if args.test_type == 'zero_shot':
+        routing_test_dataset = routing_test_dataset.map(create_zero_shot_message)
+    elif args.test_type == 'few_shot':
+        routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
+
     routing_test_dataset = routing_test_dataset.map(
         lambda sample:
         {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
@@ -118,8 +124,6 @@ if __name__ == "__main__":
         elif args.merging_strategy == 'phi3':
             strategy_model(**tokenised_batch)
 
-        
-
         # Generate the answer using the new adapter
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
@@ -140,7 +144,6 @@ if __name__ == "__main__":
         gc.collect()
         torch.cuda.empty_cache() # add to forward method in bnb after return
 
-        
         tokenizer = AutoTokenizer.from_pretrained(
             args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
         )
