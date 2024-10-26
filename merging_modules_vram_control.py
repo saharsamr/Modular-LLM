@@ -24,6 +24,7 @@ from utils.metrics import compute_generation_metrics
 from utils.config import *
 
 
+
 def set_seed(seed: int):
     random.seed(seed)
     np.random.seed(seed)
@@ -48,22 +49,23 @@ if __name__ == "__main__":
         )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+    
 
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
         expert_merger.merge()
-        model = expert_merger.get_model()
+        strategy_model = expert_merger.get_model()
 
     elif args.merging_strategy == 'xlora_average':
 
         if args.checkpoint_path:
             expert_merger = XLoraAveraging(model, tokenizer, args.model_name, args.data_portion)
             expert_merger.merge(load_path=args.checkpoint_path)
-            model = expert_merger.get_model()
+            strategy_model = expert_merger.get_model()
         else:
             expert_merger = XLoraAveraging(model, tokenizer, args.model_name, args.data_portion)
             expert_merger.merge()
-            model = expert_merger.get_model()
+            strategy_model = expert_merger.get_model()
     
     elif args.merging_strategy == 'arrow_routing':
         # expert_merger = ArrowRouting(model, tokenizer, args.model_name)
@@ -74,15 +76,16 @@ if __name__ == "__main__":
 
         # ًWe only load the model with all the adapters here, the merging will be done inside the model's layer
         expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-        model = expert_merger.get_model()
+        strategy_model = expert_merger.get_model()
 
     elif args.merging_strategy == 'phi3':
-        pass
+        expert_merger = None
+        strategy_model = model
 
     else:
         raise f'{args.merging_strategy} is not supported.'
     
-    pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True, padding=True)
+    pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
 
     routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
     routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
@@ -97,8 +100,25 @@ if __name__ == "__main__":
     references, predictions = [], []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         # Calling the model's forward path to apply Arrow Routing
+
+        # print(batch['text'])
+
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-        model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
+        
+        print(len(tokenised_batch['input_ids'][0]))
+
+        if len(tokenised_batch['input_ids'][0]) > 1500:
+            continue
+
+        if len(references) > 20:
+            break
+
+        if args.merging_strategy == 'arrow_routing':
+            strategy_model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
+        elif args.merging_strategy == 'phi3':
+            strategy_model(**tokenised_batch)
+
+        
 
         # Generate the answer using the new adapter
         outputs = pipe(batch['text'], max_new_tokens=100)
@@ -107,6 +127,42 @@ if __name__ == "__main__":
 
         references.extend(batch['target'])
         predictions.extend(preds)
+
+        del strategy_model
+        del pipe
+        del expert_merger
+        del tokenizer
+        del model
+        del bnb_config
+        torch.cuda.empty_cache()
+        import gc
+        # # del your_tensor  # Replace 'your_tensor' with the variable name
+        gc.collect()
+        torch.cuda.empty_cache() # add to forward method in bnb after return
+
+        
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
+        )
+        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        print('Loading Model ...')
+        bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=False,
+            )
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+        
+        if args.merging_strategy == 'arrow_routing':
+            expert_merger = ArrowRouting(model, tokenizer, args.model_name)
+            strategy_model = expert_merger.get_model()
+        elif args.merging_strategy == 'phi3':
+            expert_merger = None
+            strategy_model = model
+
+        pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
 
     metrics = compute_generation_metrics(references, predictions)
     print('=' * 100)
