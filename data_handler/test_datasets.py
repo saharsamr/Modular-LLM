@@ -89,7 +89,7 @@ def create_few_shot_message(ds_name, sample_rows, question_row):
     return {"messages": messages}
 
 
-def create_zero_shot_message(ds_name, row):
+def create_zero_shot_message(row, ds_name):
     messages = []
     user = {
         "content": create_user_content(ds_name, row),

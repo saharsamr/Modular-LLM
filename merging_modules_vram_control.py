@@ -93,7 +93,7 @@ if __name__ == "__main__":
     routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
         else routing_test_dataset.train_test_split(test_size=1-args.data_portion)['train']
     if args.test_type == 'zero_shot':
-        routing_test_dataset = routing_test_dataset.map(create_zero_shot_message)
+        routing_test_dataset = routing_test_dataset.map(create_zero_shot_message, ds_name=args.dataset_name)
     elif args.test_type == 'few_shot':
         routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
 
