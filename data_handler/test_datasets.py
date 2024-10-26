@@ -69,9 +69,9 @@ def create_assistant_target(ds_name, row):
         return f"{row['target']}\n"
 
 
-def create_few_shot_message(ds_name, sample_rows, question_row):
+def create_few_shot_message(sample_rows, ds_name):
     messages = []
-    for row in sample_rows:
+    for row in sample_rows[:-1]:
         user = {
             "content": create_user_content(ds_name, row),
             "role": "user"
@@ -83,7 +83,7 @@ def create_few_shot_message(ds_name, sample_rows, question_row):
         }
         messages.append(assistant)
     messages.append({
-        "content": create_user_content(ds_name, question_row),
+        "content": create_user_content(ds_name, sample_rows[-1]),
         "role": "user"
     })
     return {"messages": messages}

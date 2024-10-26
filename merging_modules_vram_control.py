@@ -95,7 +95,8 @@ if __name__ == "__main__":
     if args.test_type == 'zero_shot':
         routing_test_dataset = routing_test_dataset.map(create_zero_shot_message, ds_name=args.dataset_name)
     elif args.test_type == 'few_shot':
-        routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
+        pass
+        # routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
 
     routing_test_dataset = routing_test_dataset.map(
         lambda sample:
@@ -132,31 +133,31 @@ if __name__ == "__main__":
         references.extend(batch['target'])
         predictions.extend(preds)
 
-        del strategy_model
-        del pipe
-        del expert_merger
-        del tokenizer
-        del model
-        del bnb_config
-        torch.cuda.empty_cache()
-        import gc
-        # # del your_tensor  # Replace 'your_tensor' with the variable name
-        gc.collect()
-        torch.cuda.empty_cache() # add to forward method in bnb after return
-
-        tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
-        )
-        tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        print('Loading Model ...')
-        bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=False,
-            )
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+        # del strategy_model
+        # del pipe
+        # del expert_merger
+        # del tokenizer
+        # del model
+        # del bnb_config
+        # torch.cuda.empty_cache()
+        # import gc
+        # # # del your_tensor  # Replace 'your_tensor' with the variable name
+        # gc.collect()
+        # torch.cuda.empty_cache() # add to forward method in bnb after return
+        #
+        # tokenizer = AutoTokenizer.from_pretrained(
+        #     args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
+        # )
+        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        # print('Loading Model ...')
+        # bnb_config = BitsAndBytesConfig(
+        #         load_in_4bit=True,
+        #         bnb_4bit_quant_type="nf4",
+        #         bnb_4bit_compute_dtype=torch.float16,
+        #         bnb_4bit_use_double_quant=False,
+        #     )
+        # model = AutoModelForCausalLM.from_pretrained(
+        #     args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
         
         if args.merging_strategy == 'arrow_routing':
             expert_merger = ArrowRouting(model, tokenizer, args.model_name)
