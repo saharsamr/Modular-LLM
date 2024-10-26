@@ -109,15 +109,8 @@ if __name__ == "__main__":
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
         # Calling the model's forward path to apply Arrow Routing
 
-        print(batch['text'])
-        print(batch['label'])
-        continue
-
         tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-
         if len(tokenised_batch['input_ids'][0]) > 1500:
-            continue
-        if len(references) > 20:
             continue
 
         if args.merging_strategy == 'arrow_routing':
