@@ -18,7 +18,8 @@ from merging_lora_modules.arrow_routing import ArrowRouting
 from data_handler.test_datasets import (
     read_test_dataset,
     create_zero_shot_message,
-    create_few_shot_message
+    create_few_shot_message,
+    map_output_to_desired_target
 )
 from utils.metrics import compute_generation_metrics
 from utils.config import *
@@ -128,20 +129,36 @@ if __name__ == "__main__":
         outputs = pipe(batch['text'], max_new_tokens=100)
         preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
 
-        if args.dataset_name == 'piqa':
-            references.extend(batch['label'])
-        if args.dataset_name == 'boolq':
-            references.extend(batch['answer'])
-        if args.dataset_name == 'swag':
-            references.extend(batch['label'])
-        if (args.dataset_name == 'arc-challenge') or (args.dataset_name == 'arc-easy'):
-            references.extend(batch['answerKey'])
-        if args.dataset_name == 'oqa':
-            references.extend(batch['answers']['text'][0])
-        if args.dataset_name == 'bbh':
-            references.extend(batch['target'])
-        if args.dataset_name == 'flan':
-            references.extend(batch['target'])
+        # if ds_name == 'piqa':
+        #     return f"{'sol1' if row['label'] == 0 else 'sol2'}\n"
+        # if ds_name == 'boolq':
+        #     return f"{row['answer']}\n"
+        # if ds_name == 'swag':
+        #     return f"ending{row['label']}\n"
+        # if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        #     return f"{row['answerKey']}\n"
+        # if ds_name == 'oqa':
+        #     return f"{row['answers']['text'][0]}\n"
+        # if ds_name == 'bbh':
+        #     return f"{row['target']}\n"
+        # if ds_name == 'flan':
+        #     return f"{row['target']}\n"
+
+        # if args.dataset_name == 'piqa':
+        #     references.extend(batch['label'])
+        # if args.dataset_name == 'boolq':
+        #     references.extend(batch['answer'])
+        # if args.dataset_name == 'swag':
+        #     references.extend(batch['label'])
+        # if (args.dataset_name == 'arc-challenge') or (args.dataset_name == 'arc-easy'):
+        #     references.extend(batch['answerKey'])
+        # if args.dataset_name == 'oqa':
+        #     references.extend(batch['answers']['text'][0])
+        # if args.dataset_name == 'bbh':
+        #     references.extend(batch['target'])
+        # if args.dataset_name == 'flan':
+        #     references.extend(batch['target'])
+        references.extend(map_output_to_desired_target(args.dataset_name, batch))
         predictions.extend(preds)
         print(references[-1], ' || ', preds)
 

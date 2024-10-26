@@ -52,21 +52,25 @@ def create_user_content(ds_name, row):
         return f"{row['source']}"
 
 
-def create_assistant_target(ds_name, row):
+def map_output_to_desired_target(ds_name, row):
     if ds_name == 'piqa':
-        return f"{'sol1' if row['label'] == 0 else 'sol2'}\n"
+        return f"{'sol1' if row['label'] == 0 else 'sol2'}"
     if ds_name == 'boolq':
-        return f"{row['answer']}\n"
+        return f"{row['answer']}"
     if ds_name == 'swag':
-        return f"ending{row['label']}\n"
+        return f"ending{row['label']}"
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        return f"{row['answerKey']}\n"
+        return f"{row['answerKey']}"
     if ds_name == 'oqa':
-        return f"{row['answers']['text'][0]}\n"
+        return f"{row['answers']['text'][0]}"
     if ds_name == 'bbh':
-        return f"{row['target']}\n"
+        return f"{row['target']}"
     if ds_name == 'flan':
-        return f"{row['target']}\n"
+        return f"{row['target']}"
+
+
+def create_assistant_target(ds_name, row):
+    return f"{map_output_to_desired_target(ds_name, row)}\n"
 
 
 def create_few_shot_message(sample_rows, ds_name):
