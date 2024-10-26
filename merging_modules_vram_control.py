@@ -151,7 +151,7 @@ if __name__ == "__main__":
         #     references.extend(batch['target'])
         # if args.dataset_name == 'flan':
         #     references.extend(batch['target'])
-        references.extend(map_output_to_desired_target(args.dataset_name, batch))
+        references.extend([map_output_to_desired_target(args.dataset_name, batch)])
         predictions.extend(preds)
         print(references[-1], ' || ', preds)
 
