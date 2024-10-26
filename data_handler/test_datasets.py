@@ -33,7 +33,7 @@ def read_test_dataset(ds_name):
 
 def create_user_content(ds_name, row):
     if ds_name == 'piqa':
-        return f"[question]{row['goal']}\n'sol1'{row['sol1']}\n'sol2'{row['sol2']}\n"
+        return f"[question]{row['goal']}\n'[sol1]'{row['sol1']}\n'[sol2]'{row['sol2']}\n"
     if ds_name == 'boolq':
         return f"[passage]{row['passage']}\n[question]{row['question']}\n"
     if ds_name == 'swag':
@@ -54,15 +54,15 @@ def create_user_content(ds_name, row):
 
 def create_assistant_target(ds_name, row):
     if ds_name == 'piqa':
-        return f"{row['label']}"
+        return f"{'sol1' if row['label'] == 0 else 'sol2'}\n"
     if ds_name == 'boolq':
-        return f"{row['answer']}"
+        return f"{row['answer']}\n"
     if ds_name == 'swag':
-        return f"{row['label']}"
+        return f"ending{row['label']}\n"
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        return f"{row['answerKey']}"
+        return f"{row['answerKey']}\n"
     if ds_name == 'oqa':
-        return f"{row['answers']['text'][0]}"
+        return f"{row['answers']['text'][0]}\n"
     if ds_name == 'bbh':
         return f"{row['target']}\n"
     if ds_name == 'flan':
