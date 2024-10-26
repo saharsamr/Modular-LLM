@@ -4,27 +4,27 @@ from datasets import load_dataset, concatenate_datasets, DatasetDict
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
-        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='train')
+        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/google/boolq
     elif ds_name == 'boolq':
-        ds = load_dataset('google/boolq', cache_dir='../data/', split='train')
+        ds = load_dataset('google/boolq', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/swag
     elif ds_name == 'swag':
-        ds = load_dataset('allenai/swag', cache_dir='../data/', split='train')
+        ds = load_dataset('allenai/swag', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-challenge':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='train')
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-easy':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='train')
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/m-rousseau/oqa-v1?row=68
     elif ds_name == 'oqa':
-        ds = load_dataset('m-rousseau/oqa-v1', cache_dir='../data/', split='train')
+        ds = load_dataset('m-rousseau/oqa-v1', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/SaylorTwift/bbh
     elif ds_name == 'bbh':
-        ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train')
+        ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train', trust_remote_code=True)
     elif ds_name == 'flan':
-        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
+        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/", trust_remote_code=True)['test']
     else:
         raise f"Dataset {ds_name} is not supported yet."
 
