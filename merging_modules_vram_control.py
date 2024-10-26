@@ -159,14 +159,14 @@ if __name__ == "__main__":
         # model = AutoModelForCausalLM.from_pretrained(
         #     args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
         
-        if args.merging_strategy == 'arrow_routing':
-            expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-            strategy_model = expert_merger.get_model()
-        elif args.merging_strategy == 'phi3':
-            expert_merger = None
-            strategy_model = model
-
-        pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
+        # if args.merging_strategy == 'arrow_routing':
+        #     expert_merger = ArrowRouting(model, tokenizer, args.model_name)
+        #     strategy_model = expert_merger.get_model()
+        # elif args.merging_strategy == 'phi3':
+        #     expert_merger = None
+        #     strategy_model = model
+        #
+        # pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
 
     metrics = compute_generation_metrics(references, predictions)
     print('=' * 100)
