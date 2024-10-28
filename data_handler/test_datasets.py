@@ -73,6 +73,26 @@ def create_assistant_target(ds_name, row):
     return f"{map_output_to_desired_target(ds_name, row)}\n"
 
 
+def create_multi_choice_options(row, ds_name):
+    options_texts = []
+    content = create_user_content(ds_name, row)
+    if ds_name == 'piqa':
+        choices = [row['sol1'], row['sol2']]
+
+    for choice in choices:
+        user = {
+            "content": content,
+            "role": "user"
+        }
+        assistant = {
+            "content": choice,
+            "role": "assistant"
+        }
+        options_texts.append({"messages": [user, assistant]})
+
+    return {'options': options_texts}
+
+
 def create_few_shot_message(sample_rows, ds_name):
     messages = []
     for row in sample_rows[:-1]:

@@ -18,12 +18,11 @@ from merging_lora_modules.arrow_routing import ArrowRouting
 from data_handler.test_datasets import (
     read_test_dataset,
     create_zero_shot_message,
-    create_few_shot_message,
-    map_output_to_desired_target
+    map_output_to_desired_target,
+    create_multi_choice_options,
 )
 from utils.metrics import compute_generation_metrics
 from utils.config import *
-
 
 
 def set_seed(seed: int):
@@ -50,7 +49,6 @@ if __name__ == "__main__":
         )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
-    
 
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
@@ -69,12 +67,6 @@ if __name__ == "__main__":
             strategy_model = expert_merger.get_model()
     
     elif args.merging_strategy == 'arrow_routing':
-        # expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-        # # vectors_dict, eigvals_dict = expert_merger.routing_function()
-        # expert_merger.merge(k=3)
-        # model = expert_merger.get_model()
-        # print(model)
-
         # ًWe only load the model with all the adapters here, the merging will be done inside the model's layer
         expert_merger = ArrowRouting(model, tokenizer, args.model_name)
         strategy_model = expert_merger.get_model()
@@ -89,115 +81,66 @@ if __name__ == "__main__":
     pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
 
     routing_test_dataset = read_test_dataset(args.dataset_name)
-
-    # routing_test_dataset = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/")['test']
     routing_test_dataset = routing_test_dataset if args.data_portion == 1.0 \
         else routing_test_dataset.train_test_split(test_size=1-args.data_portion)['train']
+
     if args.test_type == 'zero_shot':
-        routing_test_dataset = routing_test_dataset.map(create_zero_shot_message, fn_kwargs={'ds_name':args.dataset_name})
-    elif args.test_type == 'few_shot':
-        pass
-        # routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
+        routing_test_dataset = routing_test_dataset.map(create_multi_choice_options,
+                                                        fn_kwargs={'ds_name': args.dataset_name})
 
     routing_test_dataset = routing_test_dataset.map(
         lambda sample:
-        {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
+        {
+            'Options': {
+                'text': pipe.tokenizer.apply_chat_template(
+                    option['messages'], tokenize=True, add_generation_prompt=False)
+            } for option in sample['options']
+        }
     )
 
-    test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
-    inputs, references, predictions = [], [], []
-    for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
-        # Calling the model's forward path to apply Arrow Routing
+    print(routing_test_dataset[0])
+    exit(0)
 
-        tokenised_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
-        if len(tokenised_batch['input_ids'][0]) > 1500:
-            continue
-
-        if args.merging_strategy == 'arrow_routing':
-            strategy_model(**tokenised_batch, compute_arrow_weights=True, top_k=3)
-        elif args.merging_strategy == 'phi3':
-            strategy_model(**tokenised_batch)
-
-        # Generate the answer using the new adapter
-        outputs = pipe(batch['text'], max_new_tokens=100)
-        preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
-
-        # if ds_name == 'piqa':
-        #     return f"{'sol1' if row['label'] == 0 else 'sol2'}\n"
-        # if ds_name == 'boolq':
-        #     return f"{row['answer']}\n"
-        # if ds_name == 'swag':
-        #     return f"ending{row['label']}\n"
-        # if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        #     return f"{row['answerKey']}\n"
-        # if ds_name == 'oqa':
-        #     return f"{row['answers']['text'][0]}\n"
-        # if ds_name == 'bbh':
-        #     return f"{row['target']}\n"
-        # if ds_name == 'flan':
-        #     return f"{row['target']}\n"
-
-        # if args.dataset_name == 'piqa':
-        #     references.extend(batch['label'])
-        # if args.dataset_name == 'boolq':
-        #     references.extend(batch['answer'])
-        # if args.dataset_name == 'swag':
-        #     references.extend(batch['label'])
-        # if (args.dataset_name == 'arc-challenge') or (args.dataset_name == 'arc-easy'):
-        #     references.extend(batch['answerKey'])
-        # if args.dataset_name == 'oqa':
-        #     references.extend(batch['answers']['text'][0])
-        # if args.dataset_name == 'bbh':
-        #     references.extend(batch['target'])
-        # if args.dataset_name == 'flan':
-        #     references.extend(batch['target'])
-
-        references.extend([map_output_to_desired_target(args.dataset_name, batch)])
-        predictions.extend(preds)
-        inputs.extend(batch['text'])
-        print(batch['text'])
-        print(references[-1])
-        print(preds)
-        print('==============')
-
-        # del strategy_model
-        # del pipe
-        # del expert_merger
-        # del tokenizer
-        # del model
-        # del bnb_config
-        # torch.cuda.empty_cache()
-        # import gc
-        # # # del your_tensor  # Replace 'your_tensor' with the variable name
-        # gc.collect()
-        # torch.cuda.empty_cache() # add to forward method in bnb after return
-        #
-        # tokenizer = AutoTokenizer.from_pretrained(
-        #     args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
-        # )
-        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        # print('Loading Model ...')
-        # bnb_config = BitsAndBytesConfig(
-        #         load_in_4bit=True,
-        #         bnb_4bit_quant_type="nf4",
-        #         bnb_4bit_compute_dtype=torch.float16,
-        #         bnb_4bit_use_double_quant=False,
-        #     )
-        # model = AutoModelForCausalLM.from_pretrained(
-        #     args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
-        
-        # if args.merging_strategy == 'arrow_routing':
-        #     expert_merger = ArrowRouting(model, tokenizer, args.model_name)
-        #     strategy_model = expert_merger.get_model()
-        # elif args.merging_strategy == 'phi3':
-        #     expert_merger = None
-        #     strategy_model = model
-        #
-        # pipe = pipeline(task="text-generation", model=strategy_model, tokenizer=tokenizer, truncation=True, padding=True)
-
-    metrics = compute_generation_metrics(references, predictions)
-    print('=' * 100)
-    print('BLEU:', metrics['bleu'])
-    print('ROUGE:', metrics['rouge'])
-    print('BERTSCORE:', metrics['bertscore'])
-    print('=' * 100)
+    # if args.test_type == 'zero_shot':
+    #     routing_test_dataset = routing_test_dataset.map(create_zero_shot_message, fn_kwargs={'ds_name':args.dataset_name})
+    # elif args.test_type == 'few_shot':
+    #     pass
+    #     # routing_test_dataset = routing_test_dataset.map(create_few_shot_message)
+    #
+    # routing_test_dataset = routing_test_dataset.map(
+    #     lambda sample:
+    #     {'text': pipe.tokenizer.apply_chat_template(sample['messages'], tokenize=False, add_generation_prompt=True)}
+    # )
+    #
+    # test_dataloader = DataLoader(routing_test_dataset, batch_size=args.batch_size)
+    # inputs, references, predictions = [], [], []
+    # for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
+    #     # Calling the model's forward path to apply Arrow Routing
+    #
+    #     tokenized_batch = tokenizer(batch['text'], return_tensors="pt", truncation=True, padding=True).to('cuda')
+    #     if len(tokenized_batch['input_ids'][0]) > 1500:
+    #         continue
+    #
+    #     if args.merging_strategy == 'arrow_routing':
+    #         strategy_model(**tokenized_batch, compute_arrow_weights=True, top_k=3)
+    #     elif args.merging_strategy == 'phi3':
+    #         strategy_model(**tokenized_batch)
+    #
+    #     # Generate the answer using the new adapter
+    #     outputs = pipe(batch['text'], max_new_tokens=100)
+    #     preds = [output[0]['generated_text'].split("<|assistant|>\n")[1].strip() for output in outputs]
+    #
+    #     references.extend([map_output_to_desired_target(args.dataset_name, batch)])
+    #     predictions.extend(preds)
+    #     inputs.extend(batch['text'])
+    #     print(batch['text'])
+    #     print(references[-1])
+    #     print(preds)
+    #     print('==============')
+    #
+    # metrics = compute_generation_metrics(references, predictions)
+    # print('=' * 100)
+    # print('BLEU:', metrics['bleu'])
+    # print('ROUGE:', metrics['rouge'])
+    # print('BERTSCORE:', metrics['bertscore'])
+    # print('=' * 100)
