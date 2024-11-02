@@ -70,7 +70,7 @@ def extract_multi_choice_target_index(row, ds_name):
     if ds_name == 'piqa':
         return int(row['label'])
     if ds_name == 'boolq':
-        return 0 if row['answer'] == 'true' else 1
+        return 0 if row['answer'] is True else 1
     if ds_name == 'swag':
         return int(row['label'])
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
