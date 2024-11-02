@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     labels, predictions = [], []
     with torch.no_grad():
-        for i, sample in tqdm(enumerate(routing_test_dataset)):
+        for i, sample in tqdm(enumerate(routing_test_dataset), total=len(routing_test_dataset)):
             options = create_multi_choice_options(sample, args.dataset_name)
             option_losses = []
             for option in options:
