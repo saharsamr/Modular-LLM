@@ -31,93 +31,57 @@ def read_test_dataset(ds_name):
     return ds
 
 
-def create_user_content(ds_name, row):
+def extract_input_content(ds_name, row):
     if ds_name == 'piqa':
-        return f"[question]{row['goal']}\n'[sol1]'{row['sol1']}\n'[sol2]'{row['sol2']}\n"
+        return row['goal']
     if ds_name == 'boolq':
-        return f"[passage]{row['passage']}\n[question]{row['question']}\n"
+        return f"[passage]{row['passage']}[question]{row['question']}"
     if ds_name == 'swag':
-        return (f"[start phrase]{row['startphrase']}\n[ending0]{row['ending0']}\n[ending1]{row['ending1']}\n"
-                f"[ending2]{row['ending2']}\n[ending3]{row['ending3']}\n")
+        return row['startphrase']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        choices = '\n'.join(
-            [f'{label}) {text}' for label, text in zip(row['choices']['label'], row['choices']['text'])]
-        )
-        return f"[question]{row['question']}\n{choices}\n"
-    if ds_name == 'oqa':
-        return f"[context]{row['context']}\n[question]{row['question']}\n"
-    if ds_name == 'bbh':
-        return f"[question]{row['input']}\n"
+        return row['question']
+    # if ds_name == 'oqa':
+    #     return f"[context]{row['context']}\n[question]{row['question']}\n"
+    # if ds_name == 'bbh':
+    #     return f"[question]{row['input']}\n"
     if ds_name == 'flan':
         return f"{row['source']}"
 
 
-def map_output_to_desired_target(ds_name, row):
-    if ds_name == 'piqa':
-        return f"{'sol1' if row['label'] == 0 else 'sol2'}"
-    if ds_name == 'boolq':
-        return f"{row['answer']}"
-    if ds_name == 'swag':
-        return f"ending{row['label']}"
-    if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        return f"{row['answerKey']}"
-    if ds_name == 'oqa':
-        return f"{row['answers']['text'][0]}"
-    if ds_name == 'bbh':
-        return f"{row['target']}"
-    if ds_name == 'flan':
-        return f"{row['target']}"
-
-
-def create_assistant_target(ds_name, row):
-    return f"{map_output_to_desired_target(ds_name, row)}\n"
-
-
 def create_multi_choice_options(row, ds_name):
     options_texts = []
-    content = create_user_content(ds_name, row)
+    content = extract_input_content(ds_name, row)
     if ds_name == 'piqa':
         choices = [row['sol1'], row['sol2']]
+    if ds_name == 'boolq':
+        choices = ['true', 'false']
+    if ds_name == 'swag':
+        choices = [row['ending0'], row['ending1'], row['ending2'], row['ending3']]
+    if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        choices = row['choices']['text']
 
     for choice in choices:
-        user = {
-            "content": content,
-            "role": "user"
-        }
-        assistant = {
-            "content": choice,
-            "role": "assistant"
-        }
-        options_texts.append({"messages": [user, assistant]})
+        options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
 
-    return {'options': options_texts}
+    return options_texts
 
 
-def create_few_shot_message(sample_rows, ds_name):
-    messages = []
-    for row in sample_rows[:-1]:
-        user = {
-            "content": create_user_content(ds_name, row),
-            "role": "user"
-        }
-        messages.append(user)
-        assistant = {
-            "content": create_assistant_target(ds_name, row),
-            "role": "assistant"
-        }
-        messages.append(assistant)
-    messages.append({
-        "content": create_user_content(ds_name, sample_rows[-1]),
-        "role": "user"
-    })
-    return {"messages": messages}
+def extract_multi_choice_target_index(row, ds_name):
+    if ds_name == 'piqa':
+        return int(row['label'])
+    if ds_name == 'boolq':
+        return 0 if row['answer'] == 'true' else 1
+    if ds_name == 'swag':
+        return int(row['label'])
+    if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        if row['answerKey'] == 'A':
+            return 0
+        elif row['answerKey'] == 'B':
+            return 1
+        elif row['answerKey'] == 'C':
+            return 2
+        elif row['answerKey'] == 'D':
+            return 3
+        else:
+            raise 'More than 4 options in ARC dataset.'
 
-
-def create_zero_shot_message(row, ds_name):
-    messages = []
-    user = {
-        "content": create_user_content(ds_name, row),
-        "role": "user"
-    }
-    messages.append(user)
-    return {"messages": messages}
