@@ -11,6 +11,9 @@ def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/allenai/swag
     elif ds_name == 'swag':
         ds = load_dataset('allenai/swag', cache_dir='../data/', split='train', trust_remote_code=True)
+    # https://huggingface.co/datasets/Rowan/hellaswag?row=0
+    elif ds_name == 'hswag':
+        ds = load_dataset('Rowan/hellaswag', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-challenge':
         ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='train', trust_remote_code=True)
@@ -38,6 +41,8 @@ def extract_input_content(ds_name, row):
         return f"[passage]{row['passage']}[question]{row['question']}"
     if ds_name == 'swag':
         return row['startphrase']
+    if ds_name == 'hswag':
+        return row['ctx']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return row['question']
     # if ds_name == 'oqa':
@@ -57,6 +62,8 @@ def create_multi_choice_options(row, ds_name):
         choices = ['true', 'false']
     if ds_name == 'swag':
         choices = [row['ending0'], row['ending1'], row['ending2'], row['ending3']]
+    if ds_name == 'hswag':
+        choices = row['endings']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         choices = row['choices']['text']
 
@@ -72,6 +79,8 @@ def extract_multi_choice_target_index(row, ds_name):
     if ds_name == 'boolq':
         return 0 if row['answer'] is True else 1
     if ds_name == 'swag':
+        return int(row['label'])
+    if ds_name == 'hswag':
         return int(row['label'])
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         if row['answerKey'] == 'A':

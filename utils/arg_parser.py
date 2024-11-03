@@ -68,7 +68,7 @@ def experts_merging_arg_parser():
     parser.add_argument(
         "--dataset_name", type=str, required=True,
         choices=[
-            'piqa', 'boolq', 'swag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan'
+            'piqa', 'boolq', 'swag', 'hswag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan'
         ]
     )
     parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
