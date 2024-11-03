@@ -83,14 +83,4 @@ def extract_multi_choice_target_index(row, ds_name):
     if ds_name == 'hswag':
         return int(row['label'])
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        if row['answerKey'] == 'A':
-            return 0
-        elif row['answerKey'] == 'B':
-            return 1
-        elif row['answerKey'] == 'C':
-            return 2
-        elif row['answerKey'] == 'D':
-            return 3
-        else:
-            raise 'More than 4 options in ARC dataset.'
-
+        return row['choices']['label'].index(row['answerKey'])
