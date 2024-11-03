@@ -55,6 +55,30 @@ def compute_loglike_loss(logits, labels, reduction="none"):
     return loss
 
 
+multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge']
+
+
+def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
+    for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
+        options = create_multi_choice_options(sample, ds_name)
+        option_losses = []
+        for option in options:
+            tokenized_text = tokenizer(
+                text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+            if routing_strategy == 'arrow_routing':
+                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
+            else:
+                logits = model(tokenized_text['input_ids']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'])
+            option_losses.append(loss.to('cpu'))
+
+        labels.append(extract_multi_choice_target_index(sample, args.dataset_name))
+        predictions.append(np.argmin(option_losses))
+
+    print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
+          f'{accuracy_score(labels, predictions)}')
+
+
 if __name__ == "__main__":
     args = experts_merging_arg_parser()
     set_seed(args.seed)
@@ -106,21 +130,7 @@ if __name__ == "__main__":
 
     labels, predictions = [], []
     with torch.no_grad():
-        for i, sample in tqdm(enumerate(routing_test_dataset), total=len(routing_test_dataset)):
-            options = create_multi_choice_options(sample, args.dataset_name)
-            option_losses = []
-            for option in options:
-                tokenized_text = tokenizer(
-                    text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
-                if args.merging_strategy == 'arrow_routing':
-                    logits = strategy_model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
-                else:
-                    logits = strategy_model(tokenized_text['input_ids']).logits
-                loss = compute_loglike_loss(logits, tokenized_text['labels'])
-                option_losses.append(loss.to('cpu'))
-
-            labels.append(extract_multi_choice_target_index(sample, args.dataset_name))
-            predictions.append(np.argmin(option_losses))
-
-        print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
-              f'{accuracy_score(labels, predictions)}')
+        if args.dataset_name in multi_choice_datasets:
+            evaluate_on_multi_choice(
+                routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
+            )
