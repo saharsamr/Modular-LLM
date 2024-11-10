@@ -12,3 +12,5 @@ rouge-score
 bert-score
 tqdm
 evaluate
+tensordict
+git+https://github.com/EricLBuehler/xlora.git

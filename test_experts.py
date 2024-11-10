@@ -13,9 +13,9 @@ import random
 from tqdm import tqdm
 import gc
 
-from utils.arg_parser import test_arg_parser
+from utils.arg_parser import experts_testing_arg_parser
 from data_handler.dataset import read_dataset, create_message_column_for_test
-from utils.metrics import compute_experts_metrics
+from utils.metrics import compute_generation_metrics
 from utils.config import *
 
 
@@ -27,7 +27,7 @@ def set_seed(seed: int):
 
 
 if __name__ == "__main__":
-    args = test_arg_parser()
+    args = experts_testing_arg_parser()
     set_seed(args.seed)
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -41,7 +41,7 @@ if __name__ == "__main__":
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=False,
         )
-    model = AutoModelForCausalLM.from_pretrained(args.model_checkpoint_path, torch_dtype=torch.float16, quantization_config=bnb_config)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
     model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
     model = model.merge_and_unload()
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         references.extend(batch['target'])
         predictions.extend(preds)
 
-    metrics = compute_experts_metrics(references, predictions)
+    metrics = compute_generation_metrics(references, predictions)
     print('=' * 100)
     print('BLEU:', metrics['bleu'])
     print('ROUGE:', metrics['rouge'])

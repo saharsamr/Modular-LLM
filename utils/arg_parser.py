@@ -2,11 +2,11 @@ import argparse
 from utils.config import *
 
 
-def train_arg_parser():
+def experts_training_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
-    parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
+    parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)
     parser.add_argument("--output_dir", type=str, default='./results')
@@ -37,16 +37,40 @@ def train_arg_parser():
     return parser.parse_args()
 
 
-def test_arg_parser():
+def experts_testing_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
-    parser.add_argument("--dataset_name", type=str, default='zhan1993/flan-10k-flat-cluster-embedding')
+    parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--data_portion", type=float, default=1.0)
     parser.add_argument("--model_checkpoint_path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=1234)
+
+    return parser.parse_args()
+
+
+def experts_merging_arg_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--project_name", type=str, default='Modular-LLM')
+    parser.add_argument(
+        "--merging_strategy", type=str, required=True,
+        choices=['simple_average', 'xlora_average', 'arrow_routing', 'phi3']
+    )
+    parser.add_argument("--checkpoint_path", type=str, default=None)
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--data_portion", type=float, default=1.0)
+    parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument(
+        "--dataset_name", type=str, required=True,
+        choices=[
+            'piqa', 'boolq', 'swag', 'hswag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan'
+        ]
+    )
+    parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
 
     return parser.parse_args()
