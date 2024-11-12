@@ -19,7 +19,7 @@ from data_handler.dataset import (
 from utils.config import *
 
 
-class LoraModuleTrainer:
+class ExpertTrainer:
 
     def __init__(
             self,

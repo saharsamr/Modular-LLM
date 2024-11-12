@@ -6,7 +6,7 @@ import torch
 from transformers import TrainingArguments
 
 from utils.arg_parser import experts_training_arg_parser
-from models.module_trainer import LoraModuleTrainer
+from models.expert_trainer import ExpertTrainer
 from data_handler.dataset import read_dataset
 from utils.config import *
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         save_total_limit=args.save_total_limit
     )
 
-    module_trainer = LoraModuleTrainer(
+    module_trainer = ExpertTrainer(
         base_model_name=args.model_name,
         lora_rank=args.rank,
         lora_alpha=args.lora_alpha,
