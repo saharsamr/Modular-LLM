@@ -74,3 +74,16 @@ def experts_merging_arg_parser():
     parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
 
     return parser.parse_args()
+
+
+def cross_lingual_arg_parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--source_formal_expert_path", type=str, default="results/en_lang/")
+    parser.add_argument("--target_formal_expert_path", type=str, default="results/ger_lang/")
+    parser.add_argument("--project_name", type=str, default='Modular-LLM')
+    parser.add_argument("--method", type=str, required=True, choices=['subtract', 'orthogonal_projection'])
+    parser.add_argument("--seed", type=int, default=1234)
+
+    return parser.parse_args()
