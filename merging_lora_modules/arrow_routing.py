@@ -18,7 +18,8 @@ class ArrowRouting(BaseMergingModule):
         super().__init__(base_model, tokenizer, model_name)
 
         # We load all the adapters
-        self.load_lora_modules()
+        # The model is already loaded using CrossLingualExpertOrganiser cla
+        # self.load_lora_modules()
         
 
     def _low_rank_svd(self, A, B):
