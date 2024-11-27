@@ -6,8 +6,10 @@ def experts_training_arg_parser():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--lang_independent", action="store_true", help="Whether or not to train experts language independent.")
+    parser.add_argument("--lang_expert_path", type=str, default='../data/hub/models--AliEdalat--le_en_1.8k_train_5token_pred/snapshots/402576cae80a80040dcaeb3fc7406e9f6c0b0371/')
     parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
-    parser.add_argument("--project_name", type=str, default='Modular-LLM')
+    parser.add_argument("--project_name", type=str, default='TrainExperts')
     parser.add_argument("--cluster_idx", type=int, required=True)
     parser.add_argument("--output_dir", type=str, default='./results')
     parser.add_argument("--epochs", type=int, default=1)
