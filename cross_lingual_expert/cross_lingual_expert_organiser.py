@@ -57,14 +57,37 @@ class CrossLingualExpertOrganiser:
         self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
         
         if self.method == 'subtract':
+            module_idx = 0
             # Iterating over the modules
             for module in self.base_model.modules():
                 if isinstance(module, LoraLayer):
                     for adapter_name in CLUSTER_CHECKPOINT_NAMES.keys():
+                        former_weight_A = module.lora_A[adapter_name].weight
+                        former_weight_B = module.lora_B[adapter_name].weight
+
                         module.lora_A[adapter_name].weight = torch.nn.Parameter(module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
+
+                        # delta_A = module.lora_A[adapter_name].weight - former_weight_A
+                        # delta_B = module.lora_B[adapter_name].weight - former_weight_B
+
+                        # if module_idx % 2 == 0:
+                        #     print(f"Block {module_idx // 2} - {adapter_name} - o_proj")
+                        # elif module_idx % 2 == 1:
+                        #     print(f"Block {module_idx // 2} - {adapter_name} - qkv_proj")
+                        # # Verification of changes of weight
+                        # print("Frobenius Norm (Overall Difference) of module A:", torch.norm(delta_A, p="fro").item())
+                        # print("Frobenius Norm (Overall Difference) of module B:", torch.norm(delta_B, p="fro").item())
+                        # print("Former weight of module A:", former_weight_A)
+                        # print("Former weight of module B:", former_weight_B)
+                        # print("="*100)
+
+                    module_idx += 1
+
+
         
         elif self.method == 'orthogonal_projection':
+            module_idx = 0
             # Iterating over the modules
             for module in self.base_model.modules():
                 if isinstance(module, LoraLayer):
@@ -85,14 +108,35 @@ class CrossLingualExpertOrganiser:
                         mixed_project_on_formal_B = Q_B @ projection_coefficients_B  
 
                         # Getting the isolated functional component
+                        former_weight_A = module.lora_A[adapter_name].weight
+                        former_weight_B = module.lora_B[adapter_name].weight
+
                         module.lora_A[adapter_name].weight = torch.nn.Parameter(mixed_expert_A.T - mixed_project_on_formal_A.T)
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(mixed_expert_B - mixed_project_on_formal_B)
 
-                        # Verification of isolation
-                        dot_product_A = torch.dot(module.lora_A[adapter_name].weight.flatten(), mixed_project_on_formal_A.T.flatten())
-                        print(f"Dot product for A (should be near 0): {dot_product_A}")
-                        dot_product_B = torch.dot(module.lora_B[adapter_name].weight.flatten(), mixed_project_on_formal_B.flatten())
-                        print(f"Dot product for B (should be near 0): {dot_product_B}")
+                        # delta_A = module.lora_A[adapter_name].weight - former_weight_A
+                        # delta_B = module.lora_B[adapter_name].weight - former_weight_B
+
+                        # if module_idx % 2 == 0:
+                        #     print(f"Block {module_idx // 2} - {adapter_name} - o_proj")
+                        # elif module_idx % 2 == 1:
+                        #     print(f"Block {module_idx // 2} - {adapter_name} - qkv_proj")
+                        # # Verification of changes of weight
+                        # print("Frobenius Norm (Overall Difference) of module A:", torch.norm(delta_A, p="fro").item())
+                        # print("Frobenius Norm (Overall Difference) of module B:", torch.norm(delta_B, p="fro").item())
+                        # print("Former weight of module A:", former_weight_A)
+                        # print("Former weight of module B:", former_weight_B)
+                        # print("="*100)
+
+                        # print(f"The weight's change in module A is: {module.lora_A[adapter_name].weight - former_weight_A}")
+                        # print(f"The weight's change in module B is: {module.lora_B[adapter_name].weight - former_weight_B}")
+                        # # Verification of isolation
+                        # dot_product_A = torch.dot(module.lora_A[adapter_name].weight.flatten(), mixed_project_on_formal_A.T.flatten())
+                        # print(f"Dot product for A (should be near 0): {dot_product_A}")
+                        # dot_product_B = torch.dot(module.lora_B[adapter_name].weight.flatten(), mixed_project_on_formal_B.flatten())
+                        # print(f"Dot product for B (should be near 0): {dot_product_B}")
+
+                    module_idx += 1
         
         # We are done with source_formal_expert, so we delete it.
         self.base_model.delete_adapter("source_formal_expert")

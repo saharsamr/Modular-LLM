@@ -18,7 +18,7 @@ class ArrowRouting(BaseMergingModule):
         super().__init__(base_model, tokenizer, model_name)
 
         # We load all the adapters
-        # The model is already loaded using CrossLingualExpertOrganiser cla
+        # The model is already loaded using CrossLingualExpertOrganiser class
         # self.load_lora_modules()
         
 

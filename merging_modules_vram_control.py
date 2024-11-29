@@ -21,6 +21,7 @@ from merging_lora_modules.simple_averaging import SimpleAveraging
 from merging_lora_modules.xlora_average import XLoraAveraging
 from utils.arg_parser import experts_merging_arg_parser
 from utils.config import *
+from cross_lingual_expert.cross_lingual_expert_organiser import CrossLingualExpertOrganiser
 
 
 def set_seed(seed: int):
@@ -83,19 +84,42 @@ if __name__ == "__main__":
     args = experts_merging_arg_parser()
     set_seed(args.seed)
 
+    # Loading the tokeniser
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
     )
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+
     print('Loading Model ...')
     bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=False,
-    )
+            low_cpu_mem_usage=True,
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=False,
+        )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+    
+    # Now we initialise the cross lingual expert
+    cle_org = CrossLingualExpertOrganiser(model, 
+                                   tokenizer, 
+                                   args.source_formal_expert_path, 
+                                   args.target_formal_expert_path,
+                                   args.disentanglement_method
+                                   )
+
+    # Loading 10 cluster's expert on the base model
+    cle_org.load_mixed_lora_modules()
+
+    # Creating functional expert
+    cle_org.create_functional_modules()
+
+    # # Creating cross lingual experts
+    # cle_org.create_cross_lingual_expert()
+
+    # Get the base model after building cross_lingual expert
+    model = cle_org.get_model()
 
     if args.merging_strategy == "simple_average":
         expert_merger = SimpleAveraging(model, tokenizer, args.model_name)
@@ -114,7 +138,6 @@ if __name__ == "__main__":
             strategy_model = expert_merger.get_model()
 
     elif args.merging_strategy == 'arrow_routing':
-        # ًWe only load the model with all the adapters here, the merging will be done inside the model's layer
         expert_merger = ArrowRouting(model, tokenizer, args.model_name)
         strategy_model = expert_merger.get_model()
 
@@ -126,7 +149,7 @@ if __name__ == "__main__":
         raise f'{args.merging_strategy} is not supported.'
 
     routing_test_dataset = read_test_dataset(args.dataset_name)
-    routing_test_dataset = routing_test_dataset.train_test_split(test_size=200, seed=args.seed)['test']
+    routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
 
     labels, predictions = [], []
     with torch.no_grad():
