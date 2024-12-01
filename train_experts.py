@@ -7,6 +7,7 @@ from transformers import TrainingArguments
 
 from utils.arg_parser import experts_training_arg_parser
 from models.expert_trainer import ExpertTrainer
+from models.lang_independent_expert_trainer import LangIndependentExpertTrainer
 from data_handler.dataset import read_dataset
 from utils.config import *
 

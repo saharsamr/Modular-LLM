@@ -21,10 +21,10 @@ from utils.config import *
 
 
 class LangIndependentSFTTrainer(SFTTrainer):
-    def __init__(self, lang_expert_model, lora_weight=1.0, **kwargs):
+    def __init__(self, lang_expert_model, dot_product_weight=1.0, **kwargs):
         super().__init__(**kwargs)
         self.lang_expert_model = lang_expert_model
-        self.lora_weight = lora_weight
+        self.dot_product_weight = dot_product_weight
         
         self.lang_expert_lora_params = {
             name: param.detach()
@@ -43,11 +43,11 @@ class LangIndependentSFTTrainer(SFTTrainer):
         
         inner_product = 0.0
         for name, param in current_lora_params.items():
-            if name in self.lang_expert_lora_params:
-                lang_param = self.lang_expert_lora_params[name].to(param.device)
+            if name.replace('default', 'lang_expert') in self.lang_expert_lora_params.keys():
+                lang_param = self.lang_expert_lora_params[name.replace('default', 'lang_expert')]
                 inner_product += (param * lang_param).sum()
                 
-        loss += self.lora_weight * inner_product
+        loss += self.dot_product_weight * inner_product
         if return_outputs:
             return (loss, outputs)
         else:
@@ -83,7 +83,7 @@ class LangIndependentExpertTrainer(ExpertTrainer):
         lang_model = AutoModelForCausalLM.from_pretrained(
             self.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
         
-        lang_model = PeftModel.from_pretrained(lang_model, self.lang_expert_path, adapter_name='lang_expert')
+        lang_model = PeftModel.from_pretrained(lang_model, self.lang_expert_path, adapter_name='lang_expert').to('cuda')
         return lang_model
 
     def train(self, train_data, eval_data, training_args):
@@ -99,6 +99,6 @@ class LangIndependentExpertTrainer(ExpertTrainer):
             tokenizer=self.tokenizer,
             args=training_args,
             lang_expert_model=self.get_lang_model(),
-            lora_weight=1.0
+            dot_product_weight=0.01
         )
         trainer.train()
