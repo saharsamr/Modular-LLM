@@ -26,6 +26,15 @@ def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/SaylorTwift/bbh
     elif ds_name == 'bbh':
         ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train', trust_remote_code=True)
+    # https://huggingface.co/datasets/allenai/winogrande
+    elif ds_name == 'wg':
+        ds = load_dataset('allenai/winogrande', cache_dir='../data/', split='winogrande_xl', trust_remote_code=True)
+    # https://huggingface.co/datasets/openai/openai_humaneval
+    elif ds_name == 'he':
+        ds = load_dataset('openai/openai_humaneval', cache_dir='../data/', split='test', trust_remote_code=True)
+    # https://huggingface.co/datasets/google-research-datasets/mbpp
+    elif ds_name == 'mbpp':
+        ds = load_dataset('google-research-datasets/mbpp', cache_dir='../data/', split='full', trust_remote_code=True)
     elif ds_name == 'flan':
         ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/", trust_remote_code=True)['test']
     else:
