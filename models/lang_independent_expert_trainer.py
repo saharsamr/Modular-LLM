@@ -47,7 +47,7 @@ class LangIndependentSFTTrainer(SFTTrainer):
                 lang_param = self.lang_expert_lora_params[name.replace('default', 'lang_expert')]
                 inner_product += (param * lang_param).sum()
                 
-        loss += self.dot_product_weight * inner_product
+        loss += torch.abs(self.dot_product_weight * inner_product)
         if return_outputs:
             return (loss, outputs)
         else:
