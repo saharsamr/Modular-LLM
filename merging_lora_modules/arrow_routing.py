@@ -5,20 +5,17 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
-# from peft.tuners.lora.layer import LoraLayer
 from local_peft.tuners.lora.layer import LoraLayer
 import torch
 from tensordict.tensordict import TensorDict
-from torch import nn
-import numpy as np
 
 
 class ArrowRouting(BaseMergingModule):
-    def __init__(self, base_model, tokenizer, model_name):
+    def __init__(self, base_model, tokenizer, model_name, load_lora_modules=True):
         super().__init__(base_model, tokenizer, model_name)
 
-        # We load all the adapters
-        self.load_lora_modules()
+        if load_lora_modules:
+            self.load_lora_modules()
         
 
     def _low_rank_svd(self, A, B):

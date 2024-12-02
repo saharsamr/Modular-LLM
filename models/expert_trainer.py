@@ -19,7 +19,7 @@ from data_handler.dataset import (
 from utils.config import *
 
 
-class LoraModuleTrainer:
+class ExpertTrainer:
 
     def __init__(
             self,
@@ -51,6 +51,7 @@ class LoraModuleTrainer:
             torch_dtype=torch.float16,
             quantization_config=self.bnb_config
         )
+        self.base_model.enable_input_require_grads()
 
         self.loftq_config = LoftQConfig(loftq_bits=4)
         self.lora_config = LoraConfig(
@@ -58,7 +59,7 @@ class LoraModuleTrainer:
             lora_alpha=lora_alpha,
             loftq_config=self.loftq_config,
             target_modules=LORA_TARGET_MODULES,
-            modules_to_save=OTHER_TRAINABLE_MODULES,
+            # modules_to_save=OTHER_TRAINABLE_MODULES,
             lora_dropout=self.lora_dropout,
             bias='none',
             task_type=TASK_TYPE
