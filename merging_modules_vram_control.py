@@ -104,7 +104,7 @@ if __name__ == "__main__":
             args.source_formal_expert_path, args.target_formal_expert_path,
             args.disentanglement_method
         )
-        cle_org.merge()
+        cle_org.merge(args.add_functional_only)
         model = cle_org.get_model()
 
     if args.merging_strategy == "simple_average":

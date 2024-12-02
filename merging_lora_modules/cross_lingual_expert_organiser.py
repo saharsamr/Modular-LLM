@@ -70,6 +70,9 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
 
         self.base_model.delete_adapter("target_formal_expert")
 
-    def merge(self):
-        self.create_functional_modules()
-        self.create_cross_lingual_expert()
+    def merge(self, add_functional_only):
+        if add_functional_only:
+            self.create_functional_modules()
+        else:
+            self.create_functional_modules()
+            self.create_cross_lingual_expert()
