@@ -87,6 +87,8 @@ def extract_input_content(ds_name, row):
     #     return f"[context]{row['context']}\n[question]{row['question']}\n"
     # if ds_name == 'bbh':
     #     return f"[question]{row['input']}\n"
+    if ds_name == 'wg':
+        return row['sentence']
     if ds_name == 'flan':
         return f"{row['source']}"
 
@@ -123,6 +125,8 @@ def create_multi_choice_options(row, ds_name):
         choices = row['endings']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         choices = row['choices']['text']
+    if ds_name == 'wg':
+        choices = [row['option1'], row['option2']]
 
     for choice in choices:
         options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
@@ -152,3 +156,6 @@ def extract_multi_choice_target_index(row, ds_name):
         return int(row['label'])
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return row['choices']['label'].index(row['answerKey'])
+    if ds_name == 'wg':
+        return int(row['answer'])
+
