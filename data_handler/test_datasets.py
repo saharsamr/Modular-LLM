@@ -1,6 +1,35 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 
 
+def read_test_dataset_lang(ds_name, lang):
+    # lang: de (germany)
+    if ds_name == 'arc-challenge':
+        ds = load_dataset("alexandrainst/m_arc", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+    elif ds_name == 'hswag':
+        ds = load_dataset("alexandrainst/m_hellaswag", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
+    # elif ds_name == 'mgsm':
+    #     ds = load_dataset("juletxara/mgsm", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+    elif ds_name == 'xnli':
+        ds = load_dataset("facebook/xnli", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+    elif ds_name == 'mmlu':
+        ds = load_dataset("alexandrainst/m_mmlu", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+    else:  # xcopa xnli xquad xlsum  adamergx paper prompts
+        raise f"Dataset {ds_name} is not supported yet."
+
+    return ds
+
+
+def extract_input_content_multilingual(ds_name, row):
+    if ds_name == 'arc-challenge':
+        return row['instruction']
+    if ds_name == 'hswag':
+        return row['ctx']
+    if ds_name == 'xnli':
+        return f"[premise]{row['premise']}[hypothesis]{row['hypothesis']}[relationship]"
+    if ds_name == 'mmlu':
+        return row['instruction']
+
+
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
@@ -62,6 +91,25 @@ def extract_input_content(ds_name, row):
         return f"{row['source']}"
 
 
+def create_multi_choice_options_multilingual(row, ds_name):
+    options_texts = []
+    content = extract_input_content_multilingual(ds_name, row)
+    if ds_name == 'hswag':
+        choices = row['endings']
+    if ds_name == 'arc-challenge':
+        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+    if ds_name == 'xnli':
+        choices = str(['entailment', 'neutral', 'contradiction'])
+    if ds_name == 'mmlu':
+        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+
+
+    for choice in choices:
+        options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
+
+    return options_texts
+
+
 def create_multi_choice_options(row, ds_name):
     options_texts = []
     content = extract_input_content(ds_name, row)
@@ -80,6 +128,17 @@ def create_multi_choice_options(row, ds_name):
         options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
 
     return options_texts
+
+
+def extract_multi_choice_target_index_multilingual(row, ds_name):
+    if ds_name == 'hswag':
+        return int(row['label'])
+    if ds_name == 'arc-challenge':
+        return ['A', 'B', 'C', 'D'].index(row['answer'])
+    if ds_name == 'xnli':
+        return int(row['label'])
+    if ds_name == 'mmlu':
+        return ['A', 'B', 'C', 'D'].index(row['answer'])
 
 
 def extract_multi_choice_target_index(row, ds_name):
