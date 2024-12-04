@@ -57,7 +57,7 @@ def read_test_dataset(ds_name):
         ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/winogrande
     elif ds_name == 'wg':
-        ds = load_dataset('allenai/winogrande', cache_dir='../data/', split='winogrande_xl', trust_remote_code=True)
+        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/openai/openai_humaneval
     elif ds_name == 'he':
         ds = load_dataset('openai/openai_humaneval', cache_dir='../data/', split='test', trust_remote_code=True)
@@ -159,7 +159,7 @@ def extract_multi_choice_target_index(row, ds_name):
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return row['choices']['label'].index(row['answerKey'])
     if ds_name == 'wg':
-        return int(row['answer'])
+        return int(row['answer']) - 1
     if ds_name == 'oqa':
         return row['choices']['label'].index(row['answerKey'])
 

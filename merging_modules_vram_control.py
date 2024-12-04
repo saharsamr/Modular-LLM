@@ -89,7 +89,6 @@ if __name__ == "__main__":
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     print('Loading Model ...')
     bnb_config = BitsAndBytesConfig(
-        low_cpu_mem_usage=True,
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_compute_dtype=torch.float16,

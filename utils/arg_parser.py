@@ -80,7 +80,7 @@ def experts_merging_arg_parser():
     parser.add_argument("--target_lang", type=str, default='de')
     parser.add_argument("--source_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
     parser.add_argument("--target_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langger_5000/checkpoint-17/")
-    parser.add_argument("--disentanglement_method", type=str, required=True, choices=['subtract', 'orthogonal_projection'])
+    parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
     parser.add_argument("--add_functional_only", type=bool, default=False)
 
     return parser.parse_args()
