@@ -49,9 +49,9 @@ def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-easy':
         ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='train', trust_remote_code=True)
-    # https://huggingface.co/datasets/m-rousseau/oqa-v1?row=68
+    # https://huggingface.co/datasets/allenai/openbookqa?row=0
     elif ds_name == 'oqa':
-        ds = load_dataset('m-rousseau/oqa-v1', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/SaylorTwift/bbh
     elif ds_name == 'bbh':
         ds = load_dataset('SaylorTwift/bbh', cache_dir='../data/', split='train', trust_remote_code=True)
@@ -83,8 +83,8 @@ def extract_input_content(ds_name, row):
         return row['ctx']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return row['question']
-    # if ds_name == 'oqa':
-    #     return f"[context]{row['context']}\n[question]{row['question']}\n"
+    if ds_name == 'oqa':
+        return row['question_stem']
     # if ds_name == 'bbh':
     #     return f"[question]{row['input']}\n"
     if ds_name == 'wg':
@@ -127,6 +127,8 @@ def create_multi_choice_options(row, ds_name):
         choices = row['choices']['text']
     if ds_name == 'wg':
         choices = [row['option1'], row['option2']]
+    if ds_name == 'oqa':
+        choices = row['choices']['text']
 
     for choice in choices:
         options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
@@ -158,4 +160,6 @@ def extract_multi_choice_target_index(row, ds_name):
         return row['choices']['label'].index(row['answerKey'])
     if ds_name == 'wg':
         return int(row['answer'])
+    if ds_name == 'oqa':
+        return row['choices']['label'].index(row['answerKey'])
 

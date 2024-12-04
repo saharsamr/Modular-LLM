@@ -55,7 +55,7 @@ def compute_loglike_loss(logits, labels, reduction="none"):
     return loss
 
 
-multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge', 'wg']
+multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge', 'wg', 'oqa']
 
 
 def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
