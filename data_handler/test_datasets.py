@@ -76,7 +76,7 @@ def load_bbh_dataset():
     for task in bbh_subsets:
         ds = load_dataset('maveriq/bigbenchhard', task, cache_dir='../data/', split='train', trust_remote_code=True)
         task_name_col = [task]*len(ds)
-        ds.add_column('task_name', task_name_col)
+        ds = ds.add_column('task_name', task_name_col)
         bbh_datasets.append(ds)
     bbh = concatenate_datasets(bbh_datasets)
     return bbh
