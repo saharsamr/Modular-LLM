@@ -1,5 +1,46 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 
+bbh_subsets = [
+    'boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa',
+    'formal_fallacies', 'geometric_shapes', 'hyperbaton',
+    'logical_deduction_five_objects', 'logical_deduction_seven_objects',
+    'logical_deduction_three_objects', 'movie_recommendation',
+    'navigate', 'penguins_in_a_table',
+    'ruin_names', 'salient_translation_error_detection', 'snarks', 'sports_understanding',
+    'temporal_sequences', 'tracking_shuffled_objects_five_objects', 'tracking_shuffled_objects_seven_objects',
+    'tracking_shuffled_objects_three_objects', 'web_of_lies',
+    ]
+
+ignored_bbh_subsets = [
+    'dyck_languages', 'multistep_arithmetic_two', 'object_counting',
+    'reasoning_about_colored_objects', 'word_sorting'
+]
+
+bbh_choice_map = {
+    'boolean_expressions': ['True', 'False'],
+    'causal_judgement': ['Yes', 'No'],
+    'date_understanding': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)'],
+    'disambiguation_qa': ['(A)', '(B)', '(C)'],
+    'formal_fallacies': ['valid', 'invalid'],
+    'geometric_shapes': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)', '(H)', '(I)', '(J)'],
+    'hyperbaton': ['(A)', '(B)'],
+    'logical_deduction_five_objects': ['(A)', '(B)', '(C)', '(D)', '(E)'],
+    'logical_deduction_seven_objects': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)'],
+    'logical_deduction_three_objects': ['(A)', '(B)', '(C)'],
+    'movie_recommendation': ['(A)', '(B)', '(C)', '(D)'],
+    'navigate': ['Yes', 'No'],
+    'penguins_in_a_table': ['(A)', '(B)', '(C)', '(D)', '(E)'],
+    'ruin_names': ['(A)', '(B)', '(C)', '(D)'],
+    'salient_translation_error_detection': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)'],
+    'snarks': ['(A)', '(B)'],
+    'sports_understanding': ['yes', 'no'],
+    'temporal_sequences': ['(A)', '(B)', '(C)', '(D)'],
+    'tracking_shuffled_objects_five_objects': ['(A)', '(B)', '(C)', '(D)', '(E)'],
+    'tracking_shuffled_objects_seven_objects': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)'],
+    'tracking_shuffled_objects_three_objects': ['(A)', '(B)', '(C)'],
+    'web_of_lies': ['Yes', 'No'],
+}
+
 
 def read_test_dataset_lang(ds_name, lang):
     # lang: de (germany)
@@ -30,6 +71,16 @@ def extract_input_content_multilingual(ds_name, row):
         return row['instruction']
 
 
+def load_bbh_dataset():
+    bbh_datasets = []
+    for task in bbh_subsets:
+        ds = load_dataset('maveriq/bigbenchhard', task, cache_dir='../data/', split='train', trust_remote_code=True)
+        task_name_col = [task]*len(ds)
+        ds.add_column('task_name', task_name_col)
+        bbh_datasets.append(ds)
+    concatenate_datasets(bbh_datasets)
+
+
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
@@ -54,7 +105,7 @@ def read_test_dataset(ds_name):
         ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='train', trust_remote_code=True)
     # https://huggingface.co/datasets/maveriq/bigbenchhard
     elif ds_name == 'bbh':
-        ds = load_dataset('maveriq/bigbenchhard', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_bbh_dataset()
     # https://huggingface.co/datasets/allenai/winogrande
     elif ds_name == 'wg':
         ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='train', trust_remote_code=True)
@@ -130,7 +181,7 @@ def create_multi_choice_options(row, ds_name):
     if ds_name == 'oqa':
         choices = row['choices']['text']
     if ds_name == 'bbh':
-        choices = ['True', 'False']
+        choices = bbh_choice_map[row['task_name']]
 
     for choice in choices:
         options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
@@ -165,5 +216,5 @@ def extract_multi_choice_target_index(row, ds_name):
     if ds_name == 'oqa':
         return row['choices']['label'].index(row['answerKey'])
     if ds_name == 'bbh':
-        return 0 if row['target'] == 'True' else 1
+        return bbh_choice_map[row['task_name']].index(row['target'])
 
