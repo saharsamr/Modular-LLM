@@ -1,45 +1,20 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
+import re
 
 bbh_subsets = [
     'boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa',
     'formal_fallacies', 'geometric_shapes', 'hyperbaton',
     'logical_deduction_five_objects', 'logical_deduction_seven_objects',
     'logical_deduction_three_objects', 'movie_recommendation',
-    'navigate', 'penguins_in_a_table',
+    'navigate', 'penguins_in_a_table', 'reasoning_about_colored_objects',
     'ruin_names', 'salient_translation_error_detection', 'snarks', 'sports_understanding',
     'temporal_sequences', 'tracking_shuffled_objects_five_objects', 'tracking_shuffled_objects_seven_objects',
     'tracking_shuffled_objects_three_objects', 'web_of_lies',
     ]
 
 ignored_bbh_subsets = [
-    'dyck_languages', 'multistep_arithmetic_two', 'object_counting',
-    'reasoning_about_colored_objects', 'word_sorting'
+    'dyck_languages', 'multistep_arithmetic_two', 'object_counting', 'word_sorting'
 ]
-
-bbh_choice_map = {
-    'boolean_expressions': ['True', 'False'],
-    'causal_judgement': ['Yes', 'No'],
-    'date_understanding': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)'],
-    'disambiguation_qa': ['(A)', '(B)', '(C)'],
-    'formal_fallacies': ['valid', 'invalid'],
-    'geometric_shapes': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)', '(H)', '(I)', '(J)'],
-    'hyperbaton': ['(A)', '(B)'],
-    'logical_deduction_five_objects': ['(A)', '(B)', '(C)', '(D)', '(E)'],
-    'logical_deduction_seven_objects': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)'],
-    'logical_deduction_three_objects': ['(A)', '(B)', '(C)'],
-    'movie_recommendation': ['(A)', '(B)', '(C)', '(D)'],
-    'navigate': ['Yes', 'No'],
-    'penguins_in_a_table': ['(A)', '(B)', '(C)', '(D)', '(E)'],
-    'ruin_names': ['(A)', '(B)', '(C)', '(D)'],
-    'salient_translation_error_detection': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)'],
-    'snarks': ['(A)', '(B)'],
-    'sports_understanding': ['yes', 'no'],
-    'temporal_sequences': ['(A)', '(B)', '(C)', '(D)'],
-    'tracking_shuffled_objects_five_objects': ['(A)', '(B)', '(C)', '(D)', '(E)'],
-    'tracking_shuffled_objects_seven_objects': ['(A)', '(B)', '(C)', '(D)', '(E)', '(F)', '(G)'],
-    'tracking_shuffled_objects_three_objects': ['(A)', '(B)', '(C)'],
-    'web_of_lies': ['Yes', 'No'],
-}
 
 
 def read_test_dataset_lang(ds_name, lang):
@@ -164,6 +139,23 @@ def create_multi_choice_options_multilingual(row, ds_name):
     return options_texts
 
 
+def get_bbh_options(row):
+    if row['task_name'] == 'boolean_expressions':
+        choices = ['True', 'False']
+    elif (row['task_name'] == 'causal_judgement') or (row['task_name'] == 'navigate') or (row['task_name'] == 'web_of_lies'):
+        choices = ['Yes', 'No']
+    elif row['task_name'] == 'formal_fallacies':
+        choices = ['valid', 'invalid']
+    elif row['task_name'] == 'sports_understanding':
+        choices = ['yes', 'no']
+    elif row['task_name'] in bbh_subsets:
+        choices = re.findall(r'\([A-Z]\)', row['input'])
+    else:
+        raise 'This subset is not supported'
+
+    return choices
+
+
 def create_multi_choice_options(row, ds_name):
     options_texts = []
     content = extract_input_content(ds_name, row)
@@ -182,7 +174,7 @@ def create_multi_choice_options(row, ds_name):
     if ds_name == 'oqa':
         choices = row['choices']['text']
     if ds_name == 'bbh':
-        choices = bbh_choice_map[row['task_name']]
+        choices = get_bbh_options(row)
 
     for choice in choices:
         options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
@@ -217,5 +209,6 @@ def extract_multi_choice_target_index(row, ds_name):
     if ds_name == 'oqa':
         return row['choices']['label'].index(row['answerKey'])
     if ds_name == 'bbh':
-        return bbh_choice_map[row['task_name']].index(row['target'])
+        choices = get_bbh_options(row)
+        return choices.index(row['target'])
 
