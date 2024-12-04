@@ -78,7 +78,8 @@ def load_bbh_dataset():
         task_name_col = [task]*len(ds)
         ds.add_column('task_name', task_name_col)
         bbh_datasets.append(ds)
-    concatenate_datasets(bbh_datasets)
+    bbh = concatenate_datasets(bbh_datasets)
+    return bbh
 
 
 def read_test_dataset(ds_name):
