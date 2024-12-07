@@ -54,7 +54,7 @@ if __name__ == "__main__":
         model = cle_org.get_model()
     else:
         model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
-        model = model.merge_and_unload()
+    model = model.merge_and_unload()
 
     print('Initializing Pipeline ...')
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
