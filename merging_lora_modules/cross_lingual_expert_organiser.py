@@ -3,9 +3,9 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from local_peft.tuners.lora.layer import LoraLayer
+from peft.tuners.lora.layer import LoraLayer
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
-from local_peft import PeftModel
+from peft import PeftModel
 import torch
 
 
