@@ -51,6 +51,14 @@ def experts_testing_arg_parser():
     parser.add_argument("--model_checkpoint_path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=1234)
 
+    parser.add_argument("--posthoc_cross_lingual", action="store_true")
+    parser.add_argument("--source_formal_expert_path", type=str,
+                        default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
+    parser.add_argument("--target_formal_expert_path", type=str,
+                        default="results/cluster0_batch16_prop1.0_langger_5000/checkpoint-17/")
+    parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
+    parser.add_argument("--add_functional_only", type=bool, default=False)
+
     return parser.parse_args()
 
 

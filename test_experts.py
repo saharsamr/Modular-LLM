@@ -15,6 +15,7 @@ import gc
 
 from utils.arg_parser import experts_testing_arg_parser
 from data_handler.dataset import read_dataset, create_message_column_for_test
+from merging_lora_modules.cross_lingual_expert_organiser import CrossLingualExpertOrganiser
 from utils.metrics import compute_generation_metrics
 from utils.config import *
 
@@ -42,8 +43,18 @@ if __name__ == "__main__":
             bnb_4bit_use_double_quant=False,
         )
     model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
-    model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
-    model = model.merge_and_unload()
+    if args.posthoc_cross_lingual:
+        cle_org = CrossLingualExpertOrganiser(
+            model, tokenizer, args.model_name,
+            args.source_formal_expert_path, args.target_formal_expert_path,
+            args.disentanglement_method,
+            load_single_expert=True, cluster_name=f'cluster{args.cluster_idx}'
+        )
+        cle_org.merge(args.add_functional_only)
+        model = cle_org.get_model()
+    else:
+        model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
+        model = model.merge_and_unload()
 
     print('Initializing Pipeline ...')
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)

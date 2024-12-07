@@ -5,11 +5,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from local_peft.tuners.lora.layer import LoraLayer
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
+from local_peft import PeftModel
 import torch
 
 
 class CrossLingualExpertOrganiser(BaseMergingModule):
-    def __init__(self, base_model, tokenizer, model_name, source_formal_expert_path, target_formal_expert_path, method, alpha=0.5, beta=0.5):
+    def __init__(
+            self, base_model, tokenizer, model_name,
+            source_formal_expert_path, target_formal_expert_path,
+            method, alpha=0.5, beta=0.5, load_single_expert=False, cluster_name=None
+    ):
         super().__init__(base_model, tokenizer, model_name)
 
         self.source_formal_expert_path = source_formal_expert_path
@@ -19,7 +24,12 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
         self.alpha = alpha
         self.beta = beta
 
-        self.load_lora_modules()
+        if load_single_expert:
+            assert cluster_name, 'Cluster idx should be passed'
+            self.base_model = PeftModel.from_pretrained(
+                self.base_model, cluster_checkpoint_names[cluster_name], adapter_name=cluster_name)
+        else:
+            self.load_lora_modules()
 
     def create_functional_modules(self):
         self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
