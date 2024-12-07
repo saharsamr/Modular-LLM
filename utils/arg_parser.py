@@ -51,6 +51,8 @@ def experts_testing_arg_parser():
     parser.add_argument("--model_checkpoint_path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=1234)
 
+    parser.add_argument("--no_lora", action="store_true")
+
     parser.add_argument("--posthoc_cross_lingual", action="store_true")
     parser.add_argument("--source_formal_expert_path", type=str,
                         default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
