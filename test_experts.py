@@ -52,11 +52,12 @@ if __name__ == "__main__":
         )
         cle_org.merge(args.add_functional_only)
         model = cle_org.get_model()
+        model = model.merge_and_unload()
     elif args.no_lora:
         pass
     else:
         model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
-    model = model.merge_and_unload()
+        model = model.merge_and_unload()
 
     print('Initializing Pipeline ...')
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
