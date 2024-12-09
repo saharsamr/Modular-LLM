@@ -97,13 +97,13 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
 
-    if args.posthoc_cross_lingual:
+    if args.posthoc_cross_lingual or args.factorize_average_lora:
         cle_org = CrossLingualExpertOrganiser(
             model, tokenizer, args.model_name,
             args.source_formal_expert_path, args.target_formal_expert_path,
             args.disentanglement_method
         )
-        cle_org.merge(args.add_functional_only)
+        cle_org.merge(args.add_functional_only, use_avg_lora=args.factorize_average_lora)
         model = cle_org.get_model()
 
     if args.merging_strategy == "simple_average":
