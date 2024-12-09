@@ -35,7 +35,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
 
     def average_lora_modules(self):
         adapter_names = list(self.cluster_names.keys())
-        self.base_model.add_adapter("average")
+        self.base_model.load_adapter(self.cluster_names['cluster0'], adapter_name="average")
 
         for module in self.base_model.modules():
             if isinstance(module, LoraLayer):
