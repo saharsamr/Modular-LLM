@@ -5,11 +5,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from local_peft.tuners.lora.layer import LoraLayer
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
+from peft import PeftModel
 import torch
 
 
 class CrossLingualExpertOrganiser(BaseMergingModule):
-    def __init__(self, base_model, tokenizer, model_name, source_formal_expert_path, target_formal_expert_path, method, alpha=0.5, beta=0.5):
+    def __init__(
+            self, base_model, tokenizer, model_name,
+            source_formal_expert_path, target_formal_expert_path,
+            method, alpha=0.5, beta=0.5, load_single_expert=False, cluster_name=None
+    ):
         super().__init__(base_model, tokenizer, model_name)
 
         self.source_formal_expert_path = source_formal_expert_path
@@ -19,7 +24,14 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
         self.alpha = alpha
         self.beta = beta
 
-        self.load_lora_modules()
+        if load_single_expert:
+            assert cluster_name, 'Cluster idx should be passed'
+            self.base_model = PeftModel.from_pretrained(
+                self.base_model, cluster_checkpoint_names[cluster_name], adapter_name=cluster_name)
+            self.cluster_names = {cluster_name: cluster_checkpoint_names[cluster_name]}
+        else:
+            self.load_lora_modules()
+            self.cluster_names = cluster_checkpoint_names
 
     def create_functional_modules(self):
         self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
@@ -28,7 +40,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
             module_idx = 0
             for module in self.base_model.modules():
                 if isinstance(module, LoraLayer):
-                    for adapter_name in cluster_checkpoint_names.keys():
+                    for adapter_name in self.cluster_names.keys():
                         module.lora_A[adapter_name].weight = torch.nn.Parameter(module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
 
@@ -42,7 +54,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                     Q_A, _ = torch.linalg.qr(module.lora_A['source_formal_expert'].weight.T)
                     Q_B, _ = torch.linalg.qr(module.lora_B['source_formal_expert'].weight)
 
-                    for adapter_name in cluster_checkpoint_names.keys():
+                    for adapter_name in self.cluster_names.keys():
                         mixed_expert_A = module.lora_A[adapter_name].weight.T
                         mixed_expert_B = module.lora_B[adapter_name].weight
 
@@ -64,7 +76,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
 
         for module in self.base_model.modules():
             if isinstance(module, LoraLayer):
-                for adapter_name in cluster_checkpoint_names.keys():
+                for adapter_name in self.cluster_names.keys():
                     module.lora_A[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_A[adapter_name].weight + self.beta * module.lora_A['target_formal_expert'].weight)
                     module.lora_B[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_B[adapter_name].weight + self.beta * module.lora_B['target_formal_expert'].weight)
 
