@@ -88,38 +88,7 @@ def experts_merging_arg_parser():
     # cross_lingual parser arguments
     parser.add_argument("--posthoc_cross_lingual", action="store_true")
     parser.add_argument("--target_lang", type=str, default='de')
-    parser.add_argument("--source_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
-    parser.add_argument("--target_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langger_5000/checkpoint-17/")
-    parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
-    parser.add_argument("--add_functional_only", type=bool, default=False)
-
-    return parser.parse_args()
-
-
-def experts_merging_arg_parser():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
-    parser.add_argument("--project_name", type=str, default='Modular-LLM')
-    parser.add_argument(
-        "--merging_strategy", type=str, required=True,
-        choices=['simple_average', 'xlora_average', 'arrow_routing', 'phi3']
-    )
-    parser.add_argument("--checkpoint_path", type=str, default=None)
-    parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--data_portion", type=float, default=1.0)
-    parser.add_argument("--seed", type=int, default=1234)
-    parser.add_argument(
-        "--dataset_name", type=str, required=True,
-        choices=[
-            'piqa', 'boolq', 'swag', 'hswag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan', 'wg'
-        ]
-    )
-    parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
-
-    # cross_lingual parser arguments
-    parser.add_argument("--posthoc_cross_lingual", action="store_true")
-    parser.add_argument("--target_lang", type=str, default='de')
+    parser.add_argument("--factorize_average_lora", action="store_true")
     parser.add_argument("--source_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
     parser.add_argument("--target_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langger_5000/checkpoint-17/")
     parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])

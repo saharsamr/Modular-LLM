@@ -33,26 +33,53 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
             self.load_lora_modules()
             self.cluster_names = cluster_checkpoint_names
 
-    def create_functional_modules(self):
+    def average_lora_modules(self):
+        adapter_names = list(self.cluster_names.keys())
+        self.base_model.load_adapter(self.cluster_names['cluster0'], adapter_name="average")
+
+        for module in self.base_model.modules():
+            if isinstance(module, LoraLayer):
+                first_adapter = adapter_names[0]
+                sum_A = torch.zeros_like(module.lora_A[first_adapter].weight)
+                sum_B = torch.zeros_like(module.lora_B[first_adapter].weight)
+
+                for adapter_name in adapter_names:
+                    sum_A += module.lora_A[adapter_name].weight
+                    sum_B += module.lora_B[adapter_name].weight
+
+                avg_A = sum_A / len(adapter_names)
+                avg_B = sum_B / len(adapter_names)
+
+                module.lora_A["average"].weight = torch.nn.Parameter(avg_A)
+                module.lora_B["average"].weight = torch.nn.Parameter(avg_B)
+
+    def create_functional_modules(self, use_avg_lora):
         self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
         
         if self.method == 'subtract':
-            module_idx = 0
             for module in self.base_model.modules():
                 if isinstance(module, LoraLayer):
                     for adapter_name in self.cluster_names.keys():
-                        module.lora_A[adapter_name].weight = torch.nn.Parameter(module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
-                        module.lora_B[adapter_name].weight = torch.nn.Parameter(module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
-
-                    module_idx += 1
+                        if use_avg_lora:
+                            module.lora_A[adapter_name].weight = torch.nn.Parameter(
+                                module.lora_A[adapter_name].weight - module.lora_A['average'].weight)
+                            module.lora_B[adapter_name].weight = torch.nn.Parameter(
+                                module.lora_B[adapter_name].weight - module.lora_B['average'].weight)
+                        else:
+                            module.lora_A[adapter_name].weight = torch.nn.Parameter(
+                                module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
+                            module.lora_B[adapter_name].weight = torch.nn.Parameter(
+                                module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
 
         elif self.method == 'orthogonal_projection':
-            module_idx = 0
             for module in self.base_model.modules():
                 if isinstance(module, LoraLayer):
-                    # QR Decomposition on formal expert in the layer
-                    Q_A, _ = torch.linalg.qr(module.lora_A['source_formal_expert'].weight.T)
-                    Q_B, _ = torch.linalg.qr(module.lora_B['source_formal_expert'].weight)
+                    if use_avg_lora:
+                        Q_A, _ = torch.linalg.qr(module.lora_A['average'].weight.T)
+                        Q_B, _ = torch.linalg.qr(module.lora_B['average'].weight)
+                    else:
+                        Q_A, _ = torch.linalg.qr(module.lora_A['source_formal_expert'].weight.T)
+                        Q_B, _ = torch.linalg.qr(module.lora_B['source_formal_expert'].weight)
 
                     for adapter_name in self.cluster_names.keys():
                         mixed_expert_A = module.lora_A[adapter_name].weight.T
@@ -67,8 +94,6 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                         module.lora_A[adapter_name].weight = torch.nn.Parameter(mixed_expert_A.T - mixed_project_on_formal_A.T)
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(mixed_expert_B - mixed_project_on_formal_B)
 
-                    module_idx += 1
-
         self.base_model.delete_adapter("source_formal_expert")
     
     def create_cross_lingual_expert(self):
@@ -82,9 +107,15 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
 
         self.base_model.delete_adapter("target_formal_expert")
 
-    def merge(self, add_functional_only):
+    def merge(self, add_functional_only, use_avg_lora=False):
+        if use_avg_lora:
+            self.average_lora_modules()
+
         if add_functional_only:
-            self.create_functional_modules()
+            self.create_functional_modules(use_avg_lora)
         else:
-            self.create_functional_modules()
+            self.create_functional_modules(use_avg_lora)
             self.create_cross_lingual_expert()
+
+        if use_avg_lora:
+            self.base_model.delete_adapter('average')
