@@ -44,7 +44,9 @@ def experts_training_arg_parser():
 def experts_testing_arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    # parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-3B-Instruct")
+
     parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument("--cluster_idx", type=int, required=True)  # The index of cluster that we want to train
