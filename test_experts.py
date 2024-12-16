@@ -77,7 +77,7 @@ if __name__ == "__main__":
     references = []
     predictions = []
     for i, batch in tqdm(enumerate(test_dataloader), total=len(test_dataloader)):
-        outputs = pipe(batch['text'], max_new_tokens=100)
+        outputs = pipe(batch['text'], max_new_tokens=100, batch_size=args.batch_size)
         preds = [output[0]['generated_text'].split("<|start_header_id|>assistant<|end_header_id|>\n")[1].strip() for output in outputs]
 
         references.extend(batch['target'])
