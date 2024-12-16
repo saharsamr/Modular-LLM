@@ -36,7 +36,7 @@ class ExpertTrainer:
         self.tokenizer = AutoTokenizer.from_pretrained(
             base_model_name, use_fast=True, padding_side='right', model_max_length=max_length
         )
-        self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        self.tokenizer.add_special_tokens({'pad_token': '|pad_id|'})
 
         # TODO: if we are going to use any other type of quantization, this should be parametrized
         self.bnb_config = BitsAndBytesConfig(
@@ -68,6 +68,8 @@ class ExpertTrainer:
 
         self.model.print_trainable_parameters()
         self.model.config.use_cache = False
+
+        self.model.resize_token_embeddings(len(self.tokenizer))
 
     def train(self, train_data, eval_data, training_args):
         train_data = apply_preprocessing(train_data, create_message_column, self.tokenizer)
