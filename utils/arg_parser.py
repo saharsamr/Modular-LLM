@@ -5,7 +5,8 @@ from utils.config import *
 def experts_training_arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    # parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--model_name", type=str, default="microsoft/phi-2")
     parser.add_argument("--lang_independent", action="store_true", help="Whether or not to train experts language independent.")
     parser.add_argument("--lang_expert_path", type=str, default='../data/hub/models--AliEdalat--le_en_1.8k_train_5token_pred/snapshots/402576cae80a80040dcaeb3fc7406e9f6c0b0371/')
     parser.add_argument("--dataset_name", type=str, default="TahaBa/flan-10K-cluster-splitted")
@@ -21,7 +22,8 @@ def experts_training_arg_parser():
     parser.add_argument("--eval_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation", type=int, default=16)
     parser.add_argument("--optimizer", default="paged_adamw_8bit")
-    parser.add_argument("--lr", type=float, default=1e-4)
+    # parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--scheduler", type=str, default="cosine", choices=["linear", "cosine", "cosine_restarts"])
     parser.add_argument("--activation_checkpointing", action="store_true")
     parser.add_argument("--weight_decay", type=float, default=0.0)

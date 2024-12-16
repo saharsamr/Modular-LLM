@@ -1,6 +1,6 @@
 import random
 
-import wandb
+# import wandb
 import numpy as np
 import torch
 from transformers import TrainingArguments
@@ -24,11 +24,11 @@ if __name__ == "__main__":
     set_seed(args.seed)
 
     if args.lang_independent:
-        run_name = 'lang_ind_cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
+        run_name = 'phi2/lang_ind_cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
     else:
-        run_name = 'cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
-    wandb.init(project=args.project_name, name=run_name)
-    wandb.config.update(dict(vars(args)), allow_val_change=True)
+        run_name = 'phi2/cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
+    # wandb.init(project=args.project_name, name=run_name)
+    # wandb.config.update(dict(vars(args)), allow_val_change=True)
 
     training_arguments = TrainingArguments(
         output_dir=args.output_dir + '/' + run_name,
@@ -37,7 +37,8 @@ if __name__ == "__main__":
         per_device_eval_batch_size=args.eval_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation,
         max_grad_norm=2.0,
-        gradient_checkpointing=True,
+        # gradient_checkpointing=True,
+        gradient_checkpointing=False,
         learning_rate=args.lr,
         weight_decay=args.weight_decay,
         optim=args.optimizer,
@@ -49,7 +50,7 @@ if __name__ == "__main__":
         do_eval=True,
         eval_strategy="steps",
         eval_steps=args.eval_every,
-        report_to="wandb",
+        report_to="none",
         run_name=run_name,  # TODO: Might be changed.
         load_best_model_at_end=args.load_best_model_at_end,
         save_total_limit=args.save_total_limit
