@@ -23,7 +23,7 @@ def experts_training_arg_parser():
     parser.add_argument("--eval_batch_size", type=int, default=2)
     parser.add_argument("--gradient_accumulation", type=int, default=16)
     parser.add_argument("--optimizer", default="paged_adamw_8bit")
-    parser.add_argument("--lr", type=float, default=1e-5)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--scheduler", type=str, default="cosine", choices=["linear", "cosine", "cosine_restarts"])
     parser.add_argument("--activation_checkpointing", action="store_true")
     parser.add_argument("--weight_decay", type=float, default=0.0)
