@@ -34,7 +34,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
     )
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizer.add_special_tokens({'pad_token': '|pad_id|'})
     print('Loading Model ...')
     bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -54,10 +54,12 @@ if __name__ == "__main__":
         model = cle_org.get_model()
         model = model.merge_and_unload()
     elif args.no_lora:
-        pass
+        model.to('cuda')
     else:
         model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
         model = model.merge_and_unload()
+
+    model.resize_token_embeddings(len(tokenizer))
 
     print('Initializing Pipeline ...')
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
