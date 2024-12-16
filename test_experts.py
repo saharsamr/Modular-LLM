@@ -43,6 +43,8 @@ if __name__ == "__main__":
             bnb_4bit_use_double_quant=False,
         )
     model = AutoModelForCausalLM.from_pretrained(args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+    model.resize_token_embeddings(len(tokenizer))
+    
     if args.posthoc_cross_lingual:
         cle_org = CrossLingualExpertOrganiser(
             model, tokenizer, args.model_name,
@@ -58,8 +60,6 @@ if __name__ == "__main__":
     else:
         model = PeftModel.from_pretrained(model, args.model_checkpoint_path).to("cuda")
         model = model.merge_and_unload()
-
-    model.resize_token_embeddings(len(tokenizer))
 
     print('Initializing Pipeline ...')
     pipe = pipeline(task="text-generation", model=model, tokenizer=tokenizer, truncation=True)
