@@ -88,11 +88,11 @@ def create_multi_choice_options_multilingual(row, ds_name):
     if ds_name == 'hswag':
         choices = row['endings']
     if ds_name == 'arc-challenge':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
     if ds_name == 'xnli':
-        choices = str(['entailment', 'neutral', 'contradiction'])
+        choices = ['entailment', 'neutral', 'contradiction']
     if ds_name == 'mmlu':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
     
 
     for choice in choices:

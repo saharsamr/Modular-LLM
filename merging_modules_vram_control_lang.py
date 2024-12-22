@@ -124,7 +124,9 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
 
+    print(args.posthoc_cross_lingual)
     if args.posthoc_cross_lingual:
+        print('posthoc')
         cle_org = CrossLingualExpertOrganiser(
             model, tokenizer, args.model_name,
             args.source_formal_expert_path, args.target_formal_expert_path,
@@ -155,6 +157,7 @@ if __name__ == "__main__":
         strategy_model = expert_merger.get_model()
 
     elif args.merging_strategy == 'phi3':
+        print('phi3')
         expert_merger = None
         strategy_model = model
 
