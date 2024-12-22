@@ -40,7 +40,7 @@ def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
     shift_labels = labels[..., 1:].contiguous()
 
     # Flatten the tokens
-    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction, ignore_index=32011)
+    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction, ignore_index=pad_index)
     shift_logits = shift_logits.view(-1, vocab_size)
     shift_labels = shift_labels.view(-1)
 
