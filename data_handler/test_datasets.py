@@ -1,4 +1,5 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
+import torch
 import re
 
 bbh_subsets = [
@@ -205,7 +206,7 @@ def extract_multi_choice_target_index(rows, ds_name):
     if ds_name == 'piqa':
         return [int(target) for target in rows['label']]
     if ds_name == 'boolq':
-        return [0 if ans is True else 1 for ans in rows['answer']]
+        return [0 if ans == True else 1 for ans in rows['answer']]
     if ds_name == 'swag':
         return int(rows['label'])
     if ds_name == 'hswag':
