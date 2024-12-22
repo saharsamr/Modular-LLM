@@ -208,9 +208,9 @@ def extract_multi_choice_target_index(rows, ds_name):
     if ds_name == 'boolq':
         return [0 if ans == True else 1 for ans in rows['answer']]
     if ds_name == 'swag':
-        return int(rows['label'])
+        return [int(lbl) for lbl in rows['label']]
     if ds_name == 'hswag':
-        return int(rows['label'])
+        return [int(lbl) for lbl in rows['label']]
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return [[ch[i] for ch in rows['choices']['label']].index(ans) for i, ans in enumerate(rows['answerKey'])]
     if ds_name == 'wg':
@@ -221,3 +221,27 @@ def extract_multi_choice_target_index(rows, ds_name):
         choices = get_bbh_options(rows)
         return [choice.index(target) for choice, target in zip(choices, rows['target'])]
 
+
+def split_dataset_by_option_count(ds, ds_name):
+    if ds_name in ['piqa', 'boolq', 'wg', 'swag']:
+        return [ds]
+
+    if ds_name == 'hswag':
+        option_count = [len(endings) for endings in ds['endings']]
+    elif (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        option_count = [len(choices['label']) for choices in ds['choices']]
+    elif ds_name == 'oqa':
+        option_count = [len(choices['label']) for choices in ds['choices']]
+    elif ds_name == 'bbh':
+        options = get_bbh_options(ds)
+        option_count = [len(sample_options) for sample_options in options]
+    else:
+        raise "Pass a supported dataset"
+
+    ds = ds.add_column('option_count', option_count)
+    option_count_values = list(set(ds['option_count']))
+
+    ds_list = []
+    for option_count in option_count_values:
+        ds_list.append(ds.filter(lambda sample: sample['option_count'] == option_count))
+    return ds_list

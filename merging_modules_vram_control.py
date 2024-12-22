@@ -15,6 +15,7 @@ from data_handler.test_datasets import (
     read_test_dataset,
     create_multi_choice_options,
     extract_multi_choice_target_index,
+    split_dataset_by_option_count
 )
 from merging_lora_modules.arrow_routing import ArrowRouting
 from merging_lora_modules.simple_averaging import SimpleAveraging
@@ -59,25 +60,26 @@ def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
 multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge', 'wg', 'oqa', 'bbh']
 
 
-def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
+def evaluate_on_multi_choice(eval_dataloader_list, model, tokenizer, ds_name, routing_strategy):
     predictions, labels = [], []
-    for i, batch in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
-        batch_options = create_multi_choice_options(batch, ds_name)
-        batch_option_count = [len(sample) for sample in batch_options]
-        batch_options = [option for sample in batch_options for option in sample]
-        tokenized_text = tokenizer(
-                text=batch_options, text_target=batch_options, padding=True, return_tensors='pt', truncation=True, max_length=512).to('cuda')
-        if routing_strategy == 'arrow_routing':
-            logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask'], compute_arrow_weights=True, top_k=3).logits
-        else:
-            logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask']).logits
-        loss = compute_loglike_loss(logits, tokenized_text['labels'], pad_index=tokenizer.pad_token_id).to('cpu')
+    for data_loader in eval_dataloader_list:
+        for i, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
+            batch_options = create_multi_choice_options(batch, ds_name)
+            batch_option_count = [len(sample) for sample in batch_options]
+            batch_options = [option for sample in batch_options for option in sample]
+            tokenized_text = tokenizer(
+                    text=batch_options, text_target=batch_options, padding=True, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+            if routing_strategy == 'arrow_routing':
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask'], compute_arrow_weights=True, top_k=3).logits
+            else:
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'], pad_index=tokenizer.pad_token_id).to('cpu')
 
-        start = 0
-        for option_count in batch_option_count:
-            predictions.append(int(np.argmin(loss[start:start+option_count])))
-            start += option_count
-        labels.extend(extract_multi_choice_target_index(batch, args.dataset_name))
+            start = 0
+            for option_count in batch_option_count:
+                predictions.append(int(np.argmin(loss[start:start+option_count])))
+                start += option_count
+            labels.extend(extract_multi_choice_target_index(batch, args.dataset_name))
 
     print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
           f'{accuracy_score(labels, predictions)}')
@@ -142,11 +144,12 @@ if __name__ == "__main__":
 
     routing_test_dataset = read_test_dataset(args.dataset_name)
     routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
-    routing_test_dataloader = torch.utils.data.DataLoader(routing_test_dataset, batch_size=args.batch_size)
+    dataset_list = split_dataset_by_option_count(routing_test_dataset, args.dataset_name)
+    data_loader_list = [torch.utils.data.DataLoader(ds, batch_size=args.batch_size) for ds in dataset_list]
 
     labels, predictions = [], []
     with torch.no_grad():
         if args.dataset_name in multi_choice_datasets:
             evaluate_on_multi_choice(
-                routing_test_dataloader, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
+                data_loader_list, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
             )
