@@ -1,4 +1,5 @@
 import random
+import gc
 
 import numpy as np
 import torch
@@ -14,6 +15,7 @@ from data_handler.test_datasets import (
     read_test_dataset,
     create_multi_choice_options,
     extract_multi_choice_target_index,
+    split_dataset_by_option_count
 )
 from merging_lora_modules.arrow_routing import ArrowRouting
 from merging_lora_modules.simple_averaging import SimpleAveraging
@@ -30,7 +32,7 @@ def set_seed(seed: int):
     torch.cuda.manual_seed_all(seed)
 
 
-def compute_loglike_loss(logits, labels, reduction="none"):
+def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
     bs = logits.size(0)
     vocab_size = logits.size(-1)
     labels = labels.squeeze(-1)
@@ -38,7 +40,7 @@ def compute_loglike_loss(logits, labels, reduction="none"):
     shift_labels = labels[..., 1:].contiguous()
 
     # Flatten the tokens
-    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction)
+    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction, ignore_index=32011)
     shift_logits = shift_logits.view(-1, vocab_size)
     shift_labels = shift_labels.view(-1)
 
@@ -58,22 +60,26 @@ def compute_loglike_loss(logits, labels, reduction="none"):
 multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge', 'wg', 'oqa', 'bbh']
 
 
-def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
-    for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
-        options = create_multi_choice_options(sample, ds_name)
-        option_losses = []
-        for option in options:
+def evaluate_on_multi_choice(eval_dataloader_list, model, tokenizer, ds_name, routing_strategy):
+    predictions, labels = [], []
+    for data_loader in eval_dataloader_list:
+        for i, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
+            batch_options = create_multi_choice_options(batch, ds_name)
+            batch_option_count = [len(sample) for sample in batch_options]
+            batch_options = [option for sample in batch_options for option in sample]
             tokenized_text = tokenizer(
-                text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+                    text=batch_options, text_target=batch_options, padding=True, return_tensors='pt', truncation=True, max_length=512).to('cuda')
             if routing_strategy == 'arrow_routing':
-                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask'], compute_arrow_weights=True, top_k=3).logits
             else:
-                logits = model(tokenized_text['input_ids']).logits
-            loss = compute_loglike_loss(logits, tokenized_text['labels'])
-            option_losses.append(loss.to('cpu'))
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'], pad_index=tokenizer.pad_token_id).to('cpu')
 
-        labels.append(extract_multi_choice_target_index(sample, args.dataset_name))
-        predictions.append(np.argmin(option_losses))
+            start = 0
+            for option_count in batch_option_count:
+                predictions.append(int(np.argmin(loss[start:start+option_count])))
+                start += option_count
+            labels.extend(extract_multi_choice_target_index(batch, args.dataset_name))
 
     print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
           f'{accuracy_score(labels, predictions)}')
@@ -134,12 +140,16 @@ if __name__ == "__main__":
     else:
         raise f'{args.merging_strategy} is not supported.'
 
+    strategy_model.eval()
+
     routing_test_dataset = read_test_dataset(args.dataset_name)
     routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
+    dataset_list = split_dataset_by_option_count(routing_test_dataset, args.dataset_name)
+    data_loader_list = [torch.utils.data.DataLoader(ds, batch_size=args.batch_size) for ds in dataset_list]
 
     labels, predictions = [], []
     with torch.no_grad():
         if args.dataset_name in multi_choice_datasets:
             evaluate_on_multi_choice(
-                routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
+                data_loader_list, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
             )
