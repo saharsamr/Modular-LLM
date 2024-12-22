@@ -71,7 +71,9 @@ def experts_testing_arg_parser():
 def experts_merging_arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    # parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-3B-Instruct")
+    
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument(
         "--merging_strategy", type=str, required=True,
