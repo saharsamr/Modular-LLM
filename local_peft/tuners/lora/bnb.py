@@ -316,6 +316,7 @@ if is_bnb_4bit_available():
             self.token_gen_counter = 0
             self.merged_lora_A = None
             self.merged_lora_B = None
+            self.experts_prototype = {}
 
         def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
             """
@@ -475,54 +476,100 @@ if is_bnb_4bit_available():
                 result = self.base_layer(x, *args, **kwargs)
             else:
                 if compute_arrow_weights == True:
-                    # We compute the arrow weights here, and create a new adapter in each layer w.r.t the weights.
-                    # Then we set the new adapter as the only active_adapter, and obtain the output of the layer.
-                    # print('****** Computing Arrow Weights ******')
-                    # print(self.token_gen_counter)
+                    
+                    if len(self.experts_prototype) == 0:
+                        ## Computing experts prototype
 
-                    experts_prototype = {}
-                    for adapter_name in cluster_checkpoint_names.keys():
-                        A = self.lora_A[adapter_name].weight.T 
-                        B = self.lora_B[adapter_name].weight.T 
-                        
-                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
-                        W = (A @ B).T  # out_features, in_features
+                        for adapter_name in cluster_checkpoint_names.keys():
+                            A = self.lora_A[adapter_name].weight.T
+                            B = self.lora_B[adapter_name].weight.T
+                            
+                            # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                            W = (A @ B).T  # out_features, in_features
 
-                        U_W, Sigma_W, _ = _low_rank_svd(A, B)
-                        top_value = Sigma_W[0] ** 2
-                        bottom_vector = U_W[:, -1]
-                        top_vector = U_W[:, 0]
+                            U_W, Sigma_W, V_W = _low_rank_svd(A, B)
+                            top_value = Sigma_W[0] ** 2
+                            first_right_singular_vector = V_W.T[:, 0]
+                            top_vector = U_W[:, 0]
 
-                        # Check that top vector is indeed an eigenvector
-                        WTW = W.T @ W
-                        ratio = WTW @ top_vector / (top_vector * top_value)
-                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
+                            # Check that top vector is indeed an eigenvector
+                            WTW = W.T @ W
+                            ratio = WTW @ top_vector / (top_vector * top_value)
+                            torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
 
-                        # Check that top vector is indeed the top eigenvector
-                        # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
-                        #     2
-                        # ).sum()
-                        
-                        experts_prototype[adapter_name] = top_vector.detach()
+                            # Check that top vector is indeed the top eigenvector
+                            # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                            #     2
+                            # ).sum()
+                            
+                            self.experts_prototype[adapter_name] = top_vector.detach()
 
-                    arrow_weights = compute_weight(x, experts_prototype, top_k).to(device='cuda:0')
 
-                    weighted_adapter_mat_A = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
-                                                        x.shape[1], self.base_layer.in_features , 4)
-                    weighted_adapter_mat_B = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
-                                                        x.shape[1], 4, self.base_layer.out_features)
-                    for i, adapter_name in enumerate(cluster_checkpoint_names.keys()):
-                        lora_A = self.lora_A[adapter_name].weight
-                        lora_B = self.lora_B[adapter_name].weight
+                    arrow_weights = compute_weight(x, self.experts_prototype, top_k).to(device='cuda:0') # shape: (batch, seq_len, expert_num)
 
-                        lora_A_per_tok = torch.einsum('bt,dr->btdr', arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_A.T)
-                        lora_B_per_tok = torch.einsum('bt,rd->btrd',arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_B.T)
-                        weighted_adapter_mat_A[i] = lora_A_per_tok
-                        weighted_adapter_mat_B[i] = lora_B_per_tok
-                
+
+                    # weighted_adapter_mat_A = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
+                    #                                     x.shape[1], self.base_layer.in_features , 8)
+                    # weighted_adapter_mat_B = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0], 
+                    #                                     x.shape[1], 8, self.base_layer.out_features)
+                    # for i, adapter_name in enumerate(cluster_checkpoint_names.keys()):
+                    #     lora_A = self.lora_A[adapter_name].weight
+                    #     lora_B = self.lora_B[adapter_name].weight
+
+                    #     lora_A_per_tok = torch.einsum('bt,dr->btdr', arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_A.T)
+                    #     lora_B_per_tok = torch.einsum('bt,rd->btrd',arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_B.T)
+                    #     weighted_adapter_mat_A[i] = lora_A_per_tok
+                    #     weighted_adapter_mat_B[i] = lora_B_per_tok
+
+
+
+                    # Assuming the following variables are defined:
+                    # cluster_checkpoint_names: dict of adapter names
+                    # x: input tensor with shape [batch_size, seq_length, ...]
+                    # self.base_layer.in_features: input feature size
+                    # self.base_layer.out_features: output feature size
+                    # arrow_weights: tensor with shape [batch_size, some_dim, num_adapters]
+                    # self.lora_A and self.lora_B: dictionaries containing adapter weights
+
+                    # Step 1: Stack all adapter weights
+                    adapter_names = list(cluster_checkpoint_names.keys())
+
+                    # Stack lora_A weights: [num_adapters, in_features, 8]
+                    lora_A = torch.stack([self.lora_A[name].weight for name in adapter_names], dim=0)
+
+                    # Stack lora_B weights: [num_adapters, 8, out_features]
+                    lora_B = torch.stack([self.lora_B[name].weight for name in adapter_names], dim=0)
+
+                    # Step 2: Transpose arrow_weights to [batch_size, num_adapters, seq_length]
+                    arrow_weights_transposed = arrow_weights.transpose(1, 2)  # Adjust dimensions as needed
+
+                    # Step 3: Compute weighted_adapter_mat_A and weighted_adapter_mat_B using einsum
+                    # weighted_adapter_mat_A: [batch_size, num_adapters, seq_length, in_features, 8]
+                    weighted_adapter_mat_A = torch.einsum(
+                        'ban,aid->b a n i d',
+                        arrow_weights_transposed,      # [batch_size, num_adapters, seq_length]
+                        lora_A                         # [num_adapters, in_features, 8]
+                    )
+
+                    # weighted_adapter_mat_B: [num_adapters, batch_size, seq_length, 8, out_features]
+                    weighted_adapter_mat_B = torch.einsum(
+                        'ban,ado->b a n d o',
+                        arrow_weights_transposed,      # [batch_size, num_adapters, seq_length]
+                        lora_B                         # [num_adapters, 8, out_features]
+                    )
+
+                    # Step 4: Permute dimensions to match the desired shape
+                    # If needed, adjust the permutation to match [num_adapters, batch_size, seq_length, ..., ...]
+                    weighted_adapter_mat_A = weighted_adapter_mat_A.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, in_features, 8]
+                    weighted_adapter_mat_B = weighted_adapter_mat_B.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, 8, out_features]
+
+                    # Now, weighted_adapter_mat_A and weighted_adapter_mat_B are fully computed without explicit loops
+
+
                     # Now we take sum along expert dimension
                     self.merged_lora_A = torch.sum(weighted_adapter_mat_A, dim=0)
                     self.merged_lora_B = torch.sum(weighted_adapter_mat_B, dim=0)
+                    
                     
 
                 # Now we should complete the forward path w.r.t the corresponding weights:
@@ -553,8 +600,11 @@ if is_bnb_4bit_available():
                     x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.mean(1, True).to(device='cuda:0')) 
 
                 else:
-                    x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.to(device='cuda:0'))
-                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.to(device='cuda:0')) 
+                    # print(x.shape)
+                    # print(self.merged_lora_A.shape)
+                    # print(self.merged_lora_B.shape)
+                    x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.transpose(2,3).to(device='cuda:0'))
+                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.transpose(2,3).to(device='cuda:0')) 
 
                 output = x * scaling
 
@@ -564,6 +614,8 @@ if is_bnb_4bit_available():
                 # print('result shape is: {}'.format(result.shape))
                 # print('output shape is: {}'.format(output.shape))
                 result = result + output
+
+            return result
 
                 # result = self.base_layer(x, *args, **kwargs)
                 # # As per Tim Dettmers, for 4bit, we need to defensively clone here.
@@ -604,7 +656,7 @@ if is_bnb_4bit_available():
                 #     # print('output shape is: {}'.format(output.shape))
                 #     result = result + output
 
-            return result
+            # return result
 
         def __repr__(self) -> str:
             rep = super().__repr__()
