@@ -1,5 +1,4 @@
 import random
-import gc
 
 import numpy as np
 import torch

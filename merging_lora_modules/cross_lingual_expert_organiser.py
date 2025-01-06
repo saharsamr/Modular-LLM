@@ -95,6 +95,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(mixed_expert_B - mixed_project_on_formal_B)
 
         self.base_model.delete_adapter("source_formal_expert")
+        print("Functional Expert has been created successfully.")
     
     def create_cross_lingual_expert(self):
         self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert')
@@ -106,6 +107,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                     module.lora_B[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_B[adapter_name].weight + self.beta * module.lora_B['target_formal_expert'].weight)
 
         self.base_model.delete_adapter("target_formal_expert")
+        print("Cross Lingual Expert has been created successfully.")
 
     def merge(self, add_functional_only, use_avg_lora=False):
         if use_avg_lora:
