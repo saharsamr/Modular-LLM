@@ -61,31 +61,31 @@ def load_bbh_dataset():
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
-        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/google/boolq
     elif ds_name == 'boolq':
-        ds = load_dataset('google/boolq', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('google/boolq', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/swag
     elif ds_name == 'swag':
-        ds = load_dataset('allenai/swag', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/swag', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/Rowan/hellaswag?row=0
     elif ds_name == 'hswag':
-        ds = load_dataset('Rowan/hellaswag', cache_dir='../data/', split='train', trust_remote_code=True)
-    # https://huggingface.co/datasets/allenai/ai2_arc?row=10
+        ds = load_dataset('Rowan/hellaswag', cache_dir='../data/', split='validation', trust_remote_code=True)
+    # https://huggingface.co/datasets/allenai/ai2_arc?row=10 -> consider test-split as well. 
     elif ds_name == 'arc-challenge':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='train', trust_remote_code=True)
-    # https://huggingface.co/datasets/allenai/ai2_arc?row=10
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='validation', trust_remote_code=True)
+    # https://huggingface.co/datasets/allenai/ai2_arc?row=10 -> consider test-split as well. 
     elif ds_name == 'arc-easy':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/openbookqa?row=0
     elif ds_name == 'oqa':
-        ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/maveriq/bigbenchhard
     elif ds_name == 'bbh':
         ds = load_bbh_dataset()
-    # https://huggingface.co/datasets/allenai/winogrande
+    # https://huggingface.co/datasets/allenai/winogrande -> consider chaning the input format
     elif ds_name == 'wg':
-        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/openai/openai_humaneval
     elif ds_name == 'he':
         ds = load_dataset('openai/openai_humaneval', cache_dir='../data/', split='test', trust_remote_code=True)
@@ -108,7 +108,7 @@ def extract_input_content(ds_name, rows):
     if ds_name == 'swag':
         return rows['startphrase']
     if ds_name == 'hswag':
-        return rows['ctx']
+        return [f'{activity}: {context}' for activity, context in zip(rows['activity_label'], rows['ctx'])]
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
         return rows['question']
     if ds_name == 'oqa':
