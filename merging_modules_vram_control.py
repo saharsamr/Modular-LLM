@@ -60,7 +60,7 @@ multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-chal
 
 def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
     for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
-        options = create_multi_choice_options(sample, ds_name)
+        options = create_multi_choice_options(sample, ds_name, tokenizer)
         option_losses = []
         for option in options:
             tokenized_text = tokenizer(
