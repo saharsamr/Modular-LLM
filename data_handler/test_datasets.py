@@ -161,7 +161,7 @@ def get_bbh_options(rows):
     return batch_choices
 
 
-def create_multi_choice_options(rows, ds_name):
+def create_multi_choice_options(rows, ds_name, tokenizer):
     batch_options = []
     contents = extract_input_content(ds_name, rows)
     if ds_name == 'piqa':
@@ -185,7 +185,11 @@ def create_multi_choice_options(rows, ds_name):
     for sample_choices, content in zip(choices, contents):
         sample_options = []
         for choice in sample_choices:
-            sample_options.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
+            chat = [
+                {'role': 'user', 'content': content},
+                {'role': 'assistant', 'content': choice}
+            ]
+            sample_options.append(tokenizer.apply_chat_template(chat, add_generation_prompt=False, tokenize=False))
         batch_options.append(sample_options)
 
     return batch_options

@@ -64,7 +64,7 @@ def evaluate_on_multi_choice(eval_dataloader_list, model, tokenizer, ds_name, ro
     predictions, labels = [], []
     for data_loader in eval_dataloader_list:
         for i, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
-            batch_options = create_multi_choice_options(batch, ds_name)
+            batch_options = create_multi_choice_options(batch, ds_name, tokenizer)
             batch_option_count = [len(sample) for sample in batch_options]
             batch_options = [option for sample in batch_options for option in sample]
             tokenized_text = tokenizer(
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     strategy_model.eval()
 
     routing_test_dataset = read_test_dataset(args.dataset_name)
-    routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
+    # routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
     dataset_list = split_dataset_by_option_count(routing_test_dataset, args.dataset_name)
     data_loader_list = [torch.utils.data.DataLoader(ds, batch_size=args.batch_size) for ds in dataset_list]
 
