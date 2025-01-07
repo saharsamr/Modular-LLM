@@ -86,7 +86,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name, use_fast=True, padding_side='right', model_max_length=MAX_LENGTH
     )
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizer.add_special_tokens({'pad_token': '|pad_id|'})
     print('Loading Model ...')
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -96,6 +96,7 @@ if __name__ == "__main__":
     )
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
+    model.resize_token_embeddings(len(tokenizer))
 
     if args.posthoc_cross_lingual or args.factorize_average_lora:
         cle_org = CrossLingualExpertOrganiser(
