@@ -60,20 +60,24 @@ multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-chal
 
 def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_strategy):
     for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
-        options = create_multi_choice_options(sample, ds_name, tokenizer)
-        option_losses = []
-        for option in options:
-            tokenized_text = tokenizer(
-                text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
-            if routing_strategy == 'arrow_routing':
-                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
-            else:
-                logits = model(tokenized_text['input_ids']).logits
-            loss = compute_loglike_loss(logits, tokenized_text['labels'])
-            option_losses.append(loss.to('cpu'))
+        try:
+            options = create_multi_choice_options(sample, ds_name, tokenizer)
+            option_losses = []
+            for option in options:
+                tokenized_text = tokenizer(
+                    text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+                if routing_strategy == 'arrow_routing':
+                    logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
+                else:
+                    logits = model(tokenized_text['input_ids']).logits
+                loss = compute_loglike_loss(logits, tokenized_text['labels'])
+                option_losses.append(loss.to('cpu'))
 
-        labels.append(extract_multi_choice_target_index(sample, args.dataset_name))
-        predictions.append(np.argmin(option_losses))
+            labels.append(extract_multi_choice_target_index(sample, args.dataset_name))
+            predictions.append(np.argmin(option_losses))
+        except:
+            print(f'Ignored Sample: {sample}')
+            print('-'*10)
 
     print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
           f'{accuracy_score(labels, predictions)}')
