@@ -13,3 +13,4 @@ bert-score
 tqdm
 evaluate
 tensordict
+scikit-learn
