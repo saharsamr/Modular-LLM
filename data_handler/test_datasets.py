@@ -177,10 +177,16 @@ def create_multi_choice_options(row, ds_name, tokenizer):
         choices = get_bbh_options(row)
 
     for choice in choices:
-        chat = [
-            {'role': 'user', 'content': content},
-            {'role': 'assistant', 'content': choice}
-        ]
+        if ds_name == 'wg':
+            input_split = content.split('_')
+            chat = [
+                {'role': 'assistant', 'content': content.replace('_', choice)},
+            ]
+        else:
+            chat = [
+                {'role': 'user', 'content': content},
+                {'role': 'assistant', 'content': choice}
+            ]
         options_texts.append(tokenizer.apply_chat_template(chat, add_generation_prompt=False, tokenize=False))
 
     return options_texts
