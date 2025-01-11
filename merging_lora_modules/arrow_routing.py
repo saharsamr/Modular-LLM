@@ -5,8 +5,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from merging_lora_modules.base_merging_module import BaseMergingModule
-# from local_peft.tuners.lora.layer import LoraLayer
 import torch
+from utils.config import cluster_checkpoint_names
 
 
 class ArrowRouting(BaseMergingModule):
@@ -37,107 +37,99 @@ class ArrowRouting(BaseMergingModule):
         U_W = U_A @ U_C
         V_W_T = V_C.t() @ U_B.t()
 
-        diff_AB = (U_W.T @ U_A).abs().diag()
-        if diff_AB[0] < 0.9:
-            print("The first singular vector of U_A and U_AB are not aligned")
+        # diff_AB = (U_W.T @ U_A).abs().diag()
+        # if diff_AB[0] < 0.9:
+        #     print("The first singular vector of U_A and U_AB are not aligned")
 
         return U_W, Sigma_C, V_W_T
     
-    # def routing_function(self):
-    #     """
-    #     This is the function responsible for computing prototype of the experts.
-    #     The prototypes will be passed to the CustomModel class as the argument to the cunstructor
-    #     """
+    def routing_function(self):
+        from local_peft.tuners.lora.layer import LoraLayer
+        """
+        This is the function responsible for computing prototype of the experts, after all the experts are loaded.
+        """
+        
+        expert_counter = 0
+    
+        # As we iterate, each layer of model include 4 LoRA layer, q_proj, k_proj, v_proj, dense
+        for name, module in self.base_model.named_modules():
+            if isinstance(module, LoraLayer): 
+                # ** module.lora_A is a dict
+                if expert_counter % 4 == 0:
+                    q_proj = module
+                elif expert_counter % 4 == 1:
+                    k_proj = module
+                elif expert_counter % 4 == 2: # We start to compute the qkv prototype
+                    v_proj = module
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        # Each lora_a weight shape: [8, 2560]
+                        # concat_expert_A shape: [24, 2560]
+                        # concat_expert_B shape: [2560, 24]
+                        concat_expert_A = torch.cat((q_proj.lora_A[adapter_name].weight, k_proj.lora_A[adapter_name].weight, v_proj.lora_A[adapter_name].weight), dim=0)
+                        concat_expert_B = torch.cat((q_proj.lora_B[adapter_name].weight, k_proj.lora_B[adapter_name].weight, v_proj.lora_B[adapter_name].weight), dim=1)
+                        
+                        A = concat_expert_A.T
+                        B = concat_expert_B.T
+                        
+                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                        W = (A @ B).T  # out_features, in_features
 
-    #     # We first load the lora modules
-    #     self.load_lora_modules()
+                        U_W, Sigma_W, V_W = self._low_rank_svd(A, B)
+                        top_value = Sigma_W[0] ** 2
+                        first_right_singular_vector = V_W.T[:, 0]
+                        top_vector = U_W[:, 0]
+                        # print(first_right_singular_vector.shape)
+                        # print(top_vector.shape)
 
-    #     proj_counter = 0
-    #     all_lora_dict = {}
-    #     # As we iterate, each layer of model include 2 LoRA layer, o_proj [(3072, 4), (4, 3072)] and
-    #     # qkv_proj [(3072, 4), (4, 9216)]
-    #     for module in self.base_model.modules():
-    #         if isinstance(module, LoraLayer):
-    #             if proj_counter % 2 == 0:
-    #                 # module is o_proj
-    #                 o_proj_lora_A_module_dict = module.lora_A
-    #                 o_proj_lora_B_module_dict = module.lora_B
-    #             else:
-    #                 # module is qkv_proj
-    #                 qkv_proj_lora_A_module_dict = module.lora_A
-    #                 qkv_proj_lora_B_module_dict = module.lora_B
+                        # Check that top vector is indeed an eigenvector
+                        WTW = W.T @ W
+                        ratio = WTW @ top_vector / (top_vector * top_value)
+                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
 
-    #                 # Now we concat o_proj and qkv_proj on dim = 1
-    #                 concat_lora_A_dict = TensorDict()
-    #                 concat_lora_B_dict = TensorDict()
+                        # Check that top vector is indeed the top eigenvector
+                        # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                        #     2
+                        # ).sum()
+                        
+                        q_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                        k_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                        v_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                    
+                elif expert_counter % 4 == 3: # We start to compute the dense layer prototype
+                    dense = module
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        # lora_a weight shape: [8, 2560]
+                        # lora_b weight shape: [2560, 8]
+                        
+                        A = dense.lora_A[adapter_name].weight.T
+                        B = dense.lora_B[adapter_name].weight.T
+                        
+                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                        W = (A @ B).T  # out_features, in_features
 
-    #                 for adapter_name in cluster_checkpoint_names.keys():
-    #                     o_proj_lora_A = o_proj_lora_A_module_dict[adapter_name].weight.T
-    #                     o_proj_lora_B = o_proj_lora_B_module_dict[adapter_name].weight
+                        U_W, Sigma_W, V_W = self._low_rank_svd(A, B)
+                        top_value = Sigma_W[0] ** 2
+                        first_right_singular_vector = V_W.T[:, 0]
+                        top_vector = U_W[:, 0]
+                        # print(first_right_singular_vector.shape)
+                        # print(top_vector.shape)
 
-    #                     qkv_proj_lora_A = qkv_proj_lora_A_module_dict[adapter_name].weight.T
-    #                     qkv_proj_lora_B = qkv_proj_lora_B_module_dict[adapter_name].weight
+                        # Check that top vector is indeed an eigenvector
+                        WTW = W.T @ W
+                        ratio = WTW @ top_vector / (top_vector * top_value)
+                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
 
-    #                     expert_lora_A = torch.cat((o_proj_lora_A, qkv_proj_lora_A), dim=0)
-    #                     expert_lora_B = torch.cat((o_proj_lora_B, qkv_proj_lora_B), dim=0).T
+                        # Check that top vector is indeed the top eigenvector
+                        # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                        #     2
+                        # ).sum()
+                        
+                        dense.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                
+                expert_counter += 1
 
-    #                     concat_lora_A_dict[adapter_name] = expert_lora_A
-    #                     concat_lora_B_dict[adapter_name] = expert_lora_B
+        print("The experts prototype have been computed successfully.")
 
-    #                 # Now we add both lora_A and lora_B dictionaries to the global dictionary
-    #                 all_lora_dict['layer' + str(proj_counter // 2)] = {'lora_A': concat_lora_A_dict, 'lora_B': concat_lora_B_dict}
-
-    #             proj_counter += 1
-
-    #     # print(all_lora_dict)
-
-    #     vectors_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
-    #     eigvals_dict = {i : {j : 0 for j in all_lora_dict[i]['lora_A'].keys()} for i in all_lora_dict.keys()}
-
-    #     for layer in all_lora_dict.keys():
-    #         for cluster in all_lora_dict[layer]['lora_A'].keys():
-
-    #             A = all_lora_dict[layer]['lora_A'][cluster]
-    #             # A = [tensor.tolist() for tensor in A.values()]
-
-    #             B = all_lora_dict[layer]['lora_B'][cluster]
-    #             # B = [tensor.tolist() for tensor in B.values()]
-
-    #             # print(torch.tensor(A).size())
-    #             # print(torch.tensor(B).size())
-
-    #             # A = torch.cat(torch.tensor(A), dim=1)
-    #             # B = torch.cat(torch.tensor(B), dim=0)
-
-    #             # rank = 4
-
-    #             # A = A.reshape(-1, rank).float()
-    #             # B = B.reshape(rank, -1).float()
-
-    #             W = (A @ B).T  # out_features, in_features
-
-    #             U_W, Sigma_W, _ = self._low_rank_svd(A, B)
-    #             top_value = Sigma_W[0] ** 2
-    #             bottom_vector = U_W[:, -1]
-    #             top_vector = U_W[:, 0]
-
-    #             # Check that top vector is indeed an eigenvector
-    #             WTW = W.T @ W
-    #             ratio = WTW @ top_vector / (top_vector * top_value)
-    #             torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
-
-    #             # Check that top vector is indeed the top eigenvector
-    #             assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
-    #                 2
-    #             ).sum()
-
-    #             # Save eigenvector and eigvenvalue
-    #             vectors_dict[layer][cluster] = top_vector.detach().cpu().numpy()
-    #             eigvals_dict[layer][cluster] = top_value.item()
-
-    #     # print(vectors_dict, eigvals_dict)
-
-    #     return vectors_dict, eigvals_dict
 
     def merge(self, k):
         """
@@ -179,34 +171,6 @@ def compute_weight(current_input, experts_prototypes, top_k):
     This function computes the coefficients for each expert in each layer.
     """
 
-    # Computing logits
-    # logits_mat = torch.zeros(len(experts_prototypes.keys()), current_input.shape[0], current_input.shape[1])
-    # for i, expert_name in enumerate(experts_prototypes.keys()):
-    #     # current_input shape is: (batch, token_num, 3072)
-    #     # experts_prototypes[expert_name] shape is: (3072)
-    #     # logits_mat[expert_name] shape is: (batch, token_num)
-    #     logits_mat[i] = torch.abs(torch.einsum('btd,d->bt', current_input.to(torch.float32), experts_prototypes[expert_name]))
-
-
-    # # Assuming `current_input` has shape (batch, token_num, 3072)
-    # # Assuming `experts_prototypes` is a dictionary where values have shape (3072,)
-
-    # # Stack the prototypes into a single tensor with shape (num_experts, 3072)
-    # prototypes_tensor = torch.stack(list(experts_prototypes.values()))  # Shape: (num_experts, 3072)
-
-    # # Reshape `current_input` for matrix multiplication
-    # # New shape: (batch * token_num, 3072)
-    # current_input_flat = current_input.view(-1, current_input.shape[-1])
-
-    # # Compute the dot product and take the absolute value
-    # # Result shape: (batch * token_num, num_experts)
-    # logits_flat = torch.abs(current_input_flat @ prototypes_tensor.T)
-
-    # # Reshape back to (num_experts, batch, token_num)
-    # logits_mat = logits_flat.view(current_input.shape[0], current_input.shape[1], -1).permute(2, 0, 1)
-
-
-
     # Assuming the following variables are defined:
     # experts_prototypes: dict of expert_name -> tensor of shape [model_dim]
     # current_input: tensor of shape [batch_size, token_num, model_dim]
@@ -222,7 +186,6 @@ def compute_weight(current_input, experts_prototypes, top_k):
     # current_input_float: [batch_size, token_num, model_dim]
     # experts_matrix: [model_dim, num_experts]
     # Resulting logits: [batch_size, token_num, num_experts]
-    # print(experts_matrix.T.shape)
     logits = torch.matmul(current_input_float, experts_matrix.T)
 
     # Step 3: Apply absolute value and permute dimensions

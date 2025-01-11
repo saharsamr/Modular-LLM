@@ -476,60 +476,13 @@ if is_bnb_4bit_available():
                 result = self.base_layer(x, *args, **kwargs)
             else:
                 if compute_arrow_weights == True:
-
+                    
                     if len(self.experts_prototype) == 0:
                         ## Computing experts prototype
-
-                        for adapter_name in cluster_checkpoint_names.keys():
-                            A = self.lora_A[adapter_name].weight.T
-                            B = self.lora_B[adapter_name].weight.T
-
-                            # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
-                            W = (A @ B).T  # out_features, in_features
-
-                            U_W, Sigma_W, V_W = _low_rank_svd(A, B)
-                            top_value = Sigma_W[0] ** 2
-                            first_right_singular_vector = V_W.T[:, 0]
-                            top_vector = U_W[:, 0]
-
-                            # Check that top vector is indeed an eigenvector
-                            WTW = W.T @ W
-                            ratio = WTW @ top_vector / (top_vector * top_value)
-                            torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
-
-                            # Check that top vector is indeed the top eigenvector
-                            # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
-                            #     2
-                            # ).sum()
-
-                            self.experts_prototype[adapter_name] = top_vector.detach()
-
+                        raise NotImplementedError("Prototypes shouldn't be computed in forward path!")
+                        ## Computing experts prototype
 
                     arrow_weights = compute_weight(x, self.experts_prototype, top_k).to(device='cuda:0') # shape: (batch, seq_len, expert_num)
-
-
-                    # weighted_adapter_mat_A = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0],
-                    #                                     x.shape[1], self.base_layer.in_features , 8)
-                    # weighted_adapter_mat_B = torch.zeros(len(cluster_checkpoint_names.keys()), x.shape[0],
-                    #                                     x.shape[1], 8, self.base_layer.out_features)
-                    # for i, adapter_name in enumerate(cluster_checkpoint_names.keys()):
-                    #     lora_A = self.lora_A[adapter_name].weight
-                    #     lora_B = self.lora_B[adapter_name].weight
-
-                    #     lora_A_per_tok = torch.einsum('bt,dr->btdr', arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_A.T)
-                    #     lora_B_per_tok = torch.einsum('bt,rd->btrd',arrow_weights.transpose(1,2)[:,i,:].squeeze(1), lora_B.T)
-                    #     weighted_adapter_mat_A[i] = lora_A_per_tok
-                    #     weighted_adapter_mat_B[i] = lora_B_per_tok
-
-
-
-                    # Assuming the following variables are defined:
-                    # cluster_checkpoint_names: dict of adapter names
-                    # x: input tensor with shape [batch_size, seq_length, ...]
-                    # self.base_layer.in_features: input feature size
-                    # self.base_layer.out_features: output feature size
-                    # arrow_weights: tensor with shape [batch_size, some_dim, num_adapters]
-                    # self.lora_A and self.lora_B: dictionaries containing adapter weights
 
                     # Step 1: Stack all adapter weights
                     adapter_names = list(cluster_checkpoint_names.keys())
@@ -563,15 +516,11 @@ if is_bnb_4bit_available():
                     weighted_adapter_mat_A = weighted_adapter_mat_A.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, in_features, 8]
                     weighted_adapter_mat_B = weighted_adapter_mat_B.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, 8, out_features]
 
-                    # Now, weighted_adapter_mat_A and weighted_adapter_mat_B are fully computed without explicit loops
-
-
                     # Now we take sum along expert dimension
                     self.merged_lora_A = torch.sum(weighted_adapter_mat_A, dim=0)
                     self.merged_lora_B = torch.sum(weighted_adapter_mat_B, dim=0)
                     
-
-
+                    
                 # Now we should complete the forward path w.r.t the corresponding weights:
                 result = self.base_layer(x, *args, **kwargs)
                 result = result.clone()
@@ -604,7 +553,7 @@ if is_bnb_4bit_available():
                     # print(self.merged_lora_A.shape)
                     # print(self.merged_lora_B.shape)
                     x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.transpose(2,3).to(device='cuda:0'))
-                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.transpose(2,3).to(device='cuda:0'))
+                    x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.transpose(2,3).to(device='cuda:0')) 
 
                 output = x * scaling
 
@@ -617,47 +566,7 @@ if is_bnb_4bit_available():
 
             return result
 
-                # result = self.base_layer(x, *args, **kwargs)
-                # # As per Tim Dettmers, for 4bit, we need to defensively clone here.
-                # # The reason is that in some cases, an error can occur that backprop
-                # # does not work on a manipulated view. This issue may be solved with
-                # # newer PyTorch versions but this would need extensive testing to be
-                # # sure.
-                # result = result.clone()
-
-                # for active_adapter in self.active_adapters:
-                #     if active_adapter not in self.lora_A.keys():
-                #         continue
-                #     lora_A = self.lora_A[active_adapter]
-                #     lora_B = self.lora_B[active_adapter]
-                #     dropout = self.lora_dropout[active_adapter]
-                #     scaling = self.scaling[active_adapter]
-
-                #     requires_conversion = not torch.is_autocast_enabled()
-                #     if requires_conversion:
-                #         expected_dtype = result.dtype
-                #         x = x.to(lora_A.weight.dtype)
-
-                #     if not self.use_dora[active_adapter]:
-                #         output = lora_B(lora_A(dropout(x))) * scaling
-                #     else:
-                #         x = dropout(x)
-                #         output = self.lora_magnitude_vector[active_adapter](
-                #             x,
-                #             lora_A=lora_A,
-                #             lora_B=lora_B,
-                #             scaling=scaling,
-                #             base_layer=self.get_base_layer(),
-                #         )
-                #     if requires_conversion:
-                #         output = output.to(expected_dtype)
-
-                #     # print('result shape is: {}'.format(result.shape))
-                #     # print('output shape is: {}'.format(output.shape))
-                #     result = result + output
-
-            # return result
-
+            
         def __repr__(self) -> str:
             rep = super().__repr__()
             return "lora." + rep
