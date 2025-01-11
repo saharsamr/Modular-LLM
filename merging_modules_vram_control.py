@@ -129,6 +129,10 @@ if __name__ == "__main__":
     elif args.merging_strategy == 'arrow_routing':
         expert_merger = ArrowRouting(
             model, tokenizer, args.model_name, load_lora_modules=(not args.posthoc_cross_lingual))
+
+        # Compute experts prototype
+        expert_merger.routing_function()
+        # Get the model
         strategy_model = expert_merger.get_model()
 
     elif args.merging_strategy == 'phi3':
