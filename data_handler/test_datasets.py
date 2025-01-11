@@ -57,6 +57,18 @@ def load_bbh_dataset():
     return bbh
 
 
+system_prompt = {
+    'piqa': 'Answer the following physical reasoning questions by selecting the most plausible option based on common sense and everyday experience.',
+    'boolq': 'Answer the following yes/no questions based on the given passage, using logical reasoning and evidence from the text.',
+    'swag': 'Complete the following sentence by selecting the most plausible continuation, based on context and common sense reasoning.',
+    'hswag': 'Choose the most plausible next action or event, based on the activity label, context, and everyday human experiences.',
+    'arc-challenge': 'Answer the following science questions based on scientific knowledge and reasoning.',
+    'arc-easy': 'Answer the following grade-school science questions based on basic scientific knowledge and reasoning.',
+    'oqa': 'Answer the following questions concisely and accurately based on general knowledge and reasoning.',
+    'bbh': 'Provide accurate answers to the following challenging multi-step reasoning questions using logical and structured problem-solving.',
+    'wg': 'Complete the sentence, ensuring it makes the most sense based on context and common sense reasoning.'
+}
+
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
@@ -177,10 +189,17 @@ def create_multi_choice_options(row, ds_name, tokenizer):
         choices = get_bbh_options(row)
 
     for choice in choices:
-        chat = [
-            {'role': 'user', 'content': content},
-            {'role': 'assistant', 'content': choice}
-        ]
+        if ds_name == 'wg':
+            chat = [
+                # {'role': 'system', 'content': system_prompt[ds_name]},
+                {'role': 'assistant', 'content': content.replace('_', choice)},
+            ]
+        else:
+            chat = [
+                # {'role': 'system', 'content': system_prompt[ds_name]},
+                {'role': 'user', 'content': content},
+                {'role': 'assistant', 'content': choice}
+            ]
         options_texts.append(tokenizer.apply_chat_template(chat, add_generation_prompt=False, tokenize=False))
 
     return options_texts
