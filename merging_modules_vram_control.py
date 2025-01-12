@@ -101,6 +101,8 @@ if __name__ == "__main__":
         args.model_name, torch_dtype=torch.float16, quantization_config=bnb_config)
     model.resize_token_embeddings(len(tokenizer))
 
+    # print(model)
+
     if args.posthoc_cross_lingual or args.factorize_average_lora:
         cle_org = CrossLingualExpertOrganiser(
             model, tokenizer, args.model_name,

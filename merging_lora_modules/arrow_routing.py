@@ -55,18 +55,48 @@ class ArrowRouting(BaseMergingModule):
         for name, module in self.base_model.named_modules():
             if isinstance(module, LoraLayer): 
                 # ** module.lora_A is a dict
-                if expert_counter % 4 == 0:
+                if "q_proj" in name:
                     q_proj = module
-                elif expert_counter % 4 == 1:
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        A = q_proj.lora_A[adapter_name].weight.T
+                        B = q_proj.lora_B[adapter_name].weight.T
+                        
+                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                        W = (A @ B).T  # out_features, in_features
+
+                        U_W, Sigma_W, V_W = self._low_rank_svd(A, B)
+                        top_value = Sigma_W[0] ** 2
+                        first_right_singular_vector = V_W.T[:, 0]
+                        top_vector = U_W[:, 0]
+                        # print(first_right_singular_vector.shape)
+                        # print(top_vector.shape)
+
+                        # Check that top vector is indeed an eigenvector
+                        WTW = W.T @ W
+                        ratio = WTW @ top_vector / (top_vector * top_value)
+                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
+
+                        # Check that top vector is indeed the top eigenvector
+                        # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                        #     2
+                        # ).sum()
+                        
+                        q_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+
+                elif "k_proj" in name:
                     k_proj = module
-                elif expert_counter % 4 == 2: # We start to compute the qkv prototype
+
+                elif "v_proj" in name: # We start to compute the kv prototype
                     v_proj = module
                     for adapter_name in cluster_checkpoint_names.keys():
-                        # Each lora_a weight shape: [8, 2560]
-                        # concat_expert_A shape: [24, 2560]
-                        # concat_expert_B shape: [2560, 24]
-                        concat_expert_A = torch.cat((q_proj.lora_A[adapter_name].weight, k_proj.lora_A[adapter_name].weight, v_proj.lora_A[adapter_name].weight), dim=0)
-                        concat_expert_B = torch.cat((q_proj.lora_B[adapter_name].weight, k_proj.lora_B[adapter_name].weight, v_proj.lora_B[adapter_name].weight), dim=1)
+                        # Each lora_a weight shape: [4, 3072]
+                        # Each lora_b weight shape: [1024, 4]
+                        # concat_expert_A shape: [8, 3072]
+                        # concat_expert_B shape: [1024, 8]
+                        # print(k_proj.lora_A[adapter_name].weight.shape)
+                        # print(v_proj.lora_A[adapter_name].weight.shape)
+                        concat_expert_A = torch.cat((k_proj.lora_A[adapter_name].weight, v_proj.lora_A[adapter_name].weight), dim=0)
+                        concat_expert_B = torch.cat((k_proj.lora_B[adapter_name].weight, v_proj.lora_B[adapter_name].weight), dim=1)
                         
                         A = concat_expert_A.T
                         B = concat_expert_B.T
@@ -91,15 +121,14 @@ class ArrowRouting(BaseMergingModule):
                         #     2
                         # ).sum()
                         
-                        q_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
                         k_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
                         v_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
                     
-                elif expert_counter % 4 == 3: # We start to compute the dense layer prototype
+                elif "o_proj" in name: # We start to compute the dense layer prototype
                     dense = module
                     for adapter_name in cluster_checkpoint_names.keys():
-                        # lora_a weight shape: [8, 2560]
-                        # lora_b weight shape: [2560, 8]
+                        # lora_a weight shape: [4, 3072]
+                        # lora_b weight shape: [3072, 4]
                         
                         A = dense.lora_A[adapter_name].weight.T
                         B = dense.lora_B[adapter_name].weight.T
@@ -126,7 +155,6 @@ class ArrowRouting(BaseMergingModule):
                         
                         dense.experts_prototype[adapter_name] = first_right_singular_vector.detach()
                 
-                expert_counter += 1
 
         print("The experts prototype have been computed successfully.")
 
