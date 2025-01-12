@@ -4,9 +4,9 @@ import os
 # Add the parent directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from merging_lora_modules.base_merging_module import BaseMergingModule
+from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
 import torch
-from utils.config import cluster_checkpoint_names
+# from utils.config import cluster_checkpoint_names
 
 
 class ArrowRouting(BaseMergingModule):
