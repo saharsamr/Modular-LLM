@@ -1,0 +1,2 @@
+#!/bin/sh
+python ../train_experts.py --language_expert=1 --language='en' --le_train_json_path='./en.json' --le_test_json_path='./LE_dataset/en_Wiki_10k_LM_511_1_test (1).json' --cluster_idx=0 --batch_size=1 --seed=1234

@@ -8,7 +8,7 @@ from transformers import TrainingArguments
 from utils.arg_parser import experts_training_arg_parser
 from models.expert_trainer import ExpertTrainer
 from models.lang_independent_expert_trainer import LangIndependentExpertTrainer
-from data_handler.dataset import read_dataset
+from data_handler.dataset import read_dataset, read_LE_dataset
 from utils.config import *
 
 
@@ -26,7 +26,8 @@ if __name__ == "__main__":
     if args.lang_independent:
         run_name = 'phi2/lang_ind_cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
     else:
-        run_name = 'phi2/cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
+        # run_name = 'phi2/cluster' + str(args.cluster_idx) + '_batch' + str(args.batch_size) + '_prop' + str(args.data_portion)
+        run_name = 'phi2/lan_expert_en_lora_test'
     # wandb.init(project=args.project_name, name=run_name)
     # wandb.config.update(dict(vars(args)), allow_val_change=True)
 
@@ -74,7 +75,12 @@ if __name__ == "__main__":
             max_length=MAX_LENGTH
         )
 
-    train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+    train_data, eval_data =  None, None
+
+    if args.language_expert == False:
+       train_data, eval_data = read_dataset(args.dataset_name, args.cluster_idx, args.data_portion, return_test=False)
+    else:
+       train_data, eval_data = read_LE_dataset(args.le_train_json_path, args.le_test_json_path, return_test=False)
 
     module_trainer.train(
         train_data=train_data,

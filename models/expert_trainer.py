@@ -39,25 +39,25 @@ class ExpertTrainer:
         self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
         # TODO: if we are going to use any other type of quantization, this should be parametrized
-        self.bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=False,
-        )
+        # self.bnb_config = BitsAndBytesConfig(
+        #     load_in_4bit=True,
+        #     bnb_4bit_quant_type="nf4",
+        #     bnb_4bit_compute_dtype=torch.float16,
+        #     bnb_4bit_use_double_quant=False,
+        # )
 
         self.base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
             torch_dtype=torch.float16,
-            quantization_config=self.bnb_config
+            # quantization_config=self.bnb_config
         )
         self.base_model.enable_input_require_grads()
 
-        self.loftq_config = LoftQConfig(loftq_bits=4)
+        # self.loftq_config = LoftQConfig(loftq_bits=4)
         self.lora_config = LoraConfig(
             r=lora_rank,
             lora_alpha=lora_alpha,
-            loftq_config=self.loftq_config,
+            # loftq_config=self.loftq_config,
             target_modules=LORA_TARGET_MODULES,
             # modules_to_save=OTHER_TRAINABLE_MODULES,
             lora_dropout=self.lora_dropout,
