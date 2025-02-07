@@ -14,6 +14,9 @@ from data_handler.test_datasets import (
     read_test_dataset,
     create_multi_choice_options,
     extract_multi_choice_target_index,
+    read_test_dataset_lang,
+    extract_multi_choice_target_index_multilingual,
+    create_multi_choice_options_multilingual
 )
 from merging_lora_modules.arrow_routing import ArrowRouting
 from merging_lora_modules.simple_averaging import SimpleAveraging
@@ -78,6 +81,27 @@ def evaluate_on_multi_choice(eval_dataset, model, tokenizer, ds_name, routing_st
 
     print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
           f'{accuracy_score(labels, predictions)}')
+    
+
+def evaluate_on_multi_choice_lan(eval_dataset, model, tokenizer, ds_name, routing_strategy):
+    for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
+        options = create_multi_choice_options_multilingual(sample, ds_name)
+        option_losses = []
+        for option in options:
+            tokenized_text = tokenizer(
+                text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+            if routing_strategy == 'arrow_routing':
+                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
+            else:
+                logits = model(tokenized_text['input_ids']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'])
+            option_losses.append(loss.to('cpu'))
+
+        labels.append(extract_multi_choice_target_index_multilingual(sample, args.dataset_name))
+        predictions.append(np.argmin(option_losses))
+
+    print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
+          f'{accuracy_score(labels, predictions)}')
 
 
 if __name__ == "__main__":
@@ -135,12 +159,15 @@ if __name__ == "__main__":
     else:
         raise f'{args.merging_strategy} is not supported.'
 
-    routing_test_dataset = read_test_dataset(args.dataset_name)
+    # routing_test_dataset = read_test_dataset(args.dataset_name)
     # routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
+
+    routing_test_dataset = read_test_dataset_lang(args.dataset_name, args.target_lang)
+    routing_test_dataset = routing_test_dataset.train_test_split(test_size=1200, seed=args.seed)['test']
 
     labels, predictions = [], []
     with torch.no_grad():
         if args.dataset_name in multi_choice_datasets:
-            evaluate_on_multi_choice(
+            evaluate_on_multi_choice_lan(
                 routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
             )

@@ -20,15 +20,15 @@ ignored_bbh_subsets = [
 def read_test_dataset_lang(ds_name, lang):
     # lang: de (germany)
     if ds_name == 'arc-challenge':
-        ds = load_dataset("alexandrainst/m_arc", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("alexandrainst/m_arc", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     elif ds_name == 'hswag':
         ds = load_dataset("alexandrainst/m_hellaswag", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     # elif ds_name == 'mgsm':
     #     ds = load_dataset("juletxara/mgsm", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
     elif ds_name == 'xnli':
-        ds = load_dataset("facebook/xnli", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("facebook/xnli", lang, cache_dir='../../data/', split='validation', trust_remote_code=True)
     elif ds_name == 'mmlu':
-        ds = load_dataset("alexandrainst/m_mmlu", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("alexandrainst/m_mmlu", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     else:  # xcopa xnli xquad xlsum  adamergx paper prompts
         raise f"Dataset {ds_name} is not supported yet."
 
@@ -126,11 +126,11 @@ def create_multi_choice_options_multilingual(row, ds_name):
     if ds_name == 'hswag':
         choices = row['endings']
     if ds_name == 'arc-challenge':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
     if ds_name == 'xnli':
-        choices = str(['entailment', 'neutral', 'contradiction'])
+        choices = ['entailment', 'neutral', 'contradiction']
     if ds_name == 'mmlu':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
 
 
     for choice in choices:
@@ -186,7 +186,7 @@ def extract_multi_choice_target_index_multilingual(row, ds_name):
     if ds_name == 'hswag':
         return int(row['label'])
     if ds_name == 'arc-challenge':
-        return ['A', 'B', 'C', 'D'].index(row['answer'])
+        return ['A', 'B', 'C', 'D', 'E'].index(row['answer'])
     if ds_name == 'xnli':
         return int(row['label'])
     if ds_name == 'mmlu':

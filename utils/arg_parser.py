@@ -80,17 +80,18 @@ def experts_merging_arg_parser():
     parser.add_argument(
         "--dataset_name", type=str, required=True,
         choices=[
-            'piqa', 'boolq', 'swag', 'hswag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan', 'wg'
+            'piqa', 'boolq', 'swag', 'hswag', 'arc-challenge', 'arc-easy', 'oqa', 'bbh', 'flan', 'wg', 'xnli', 'mmlu'
         ]
     )
     parser.add_argument("--test_type", type=str, default='zero_shot', choices=['zero_shot', 'few_shot'])
 
     # cross_lingual parser arguments
     parser.add_argument("--posthoc_cross_lingual", action="store_true")
-    parser.add_argument("--target_lang", type=str, default='de')
+    parser.add_argument("--target_lang", type=str, default='fr')
     parser.add_argument("--factorize_average_lora", action="store_true")
-    parser.add_argument("--source_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langen_5000/checkpoint-17/")
-    parser.add_argument("--target_formal_expert_path", type=str, default="results/cluster0_batch16_prop1.0_langger_5000/checkpoint-17/")
+    parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langen/checkpoint-17")
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langar/checkpoint-480")
+    parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langfr/checkpoint-35")
     parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
     parser.add_argument("--add_functional_only", type=bool, default=False)
 

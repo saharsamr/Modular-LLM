@@ -13,7 +13,7 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
     def __init__(
             self, base_model, tokenizer, model_name,
             source_formal_expert_path, target_formal_expert_path,
-            method, alpha=0.5, beta=0.5, load_single_expert=False, cluster_name=None
+            method, alpha=1, beta=1, load_single_expert=False, cluster_name=None
     ):
         super().__init__(base_model, tokenizer, model_name)
 
@@ -114,6 +114,11 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
             self.average_lora_modules()
 
         if add_functional_only:
+            # TODO: add 3 level if elif else
+            self.create_functional_modules(use_avg_lora)
+            self.source_formal_expert_path = self.target_formal_expert_path
+            self.create_functional_modules(use_avg_lora)
+            self.source_formal_expert_path = "/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langger/checkpoint-17"
             self.create_functional_modules(use_avg_lora)
         else:
             self.create_functional_modules(use_avg_lora)
