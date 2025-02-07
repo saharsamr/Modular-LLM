@@ -136,6 +136,7 @@ if __name__ == "__main__":
         raise f'{args.merging_strategy} is not supported.'
 
     routing_test_dataset = read_test_dataset(args.dataset_name)
+    print(strategy_model)
     # routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
 
     labels, predictions = [], []

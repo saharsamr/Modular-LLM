@@ -87,11 +87,12 @@ def experts_merging_arg_parser():
 
     # cross_lingual parser arguments
     parser.add_argument("--posthoc_cross_lingual", action="store_true")
-    parser.add_argument("--target_lang", type=str, default='fr')
+    parser.add_argument("--target_lang", type=str, default='ar')
     parser.add_argument("--factorize_average_lora", action="store_true")
     parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langen/checkpoint-17")
-    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langar/checkpoint-480")
-    parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langfr/checkpoint-35")
+    parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langar/checkpoint-8") #Arabic
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langfr/checkpoint-35") #French
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langger/checkpoint-17") #German
     parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
     parser.add_argument("--add_functional_only", type=bool, default=False)
 

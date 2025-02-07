@@ -103,10 +103,12 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
         for module in self.base_model.modules():
             if isinstance(module, LoraLayer):
                 for adapter_name in self.cluster_names.keys():
-                    module.lora_A[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_A[adapter_name].weight + self.beta * module.lora_A['target_formal_expert'].weight)
-                    module.lora_B[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_B[adapter_name].weight + self.beta * module.lora_B['target_formal_expert'].weight)
+                    module.lora_A[adapter_name].weight = torch.nn.Parameter(module.lora_A[adapter_name].weight + module.lora_A['target_formal_expert'].weight)
+                    module.lora_B[adapter_name].weight = torch.nn.Parameter(module.lora_B[adapter_name].weight + module.lora_B['target_formal_expert'].weight)
 
         self.base_model.delete_adapter("target_formal_expert")
+        # cluster_checkpoint_names["target_formal_expert"] = self.target_formal_expert_path
+        # print(cluster_checkpoint_names)
         print("Cross Lingual Expert has been created successfully.")
 
     def merge(self, add_functional_only, use_avg_lora=False):
@@ -118,11 +120,12 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
             self.create_functional_modules(use_avg_lora)
             self.source_formal_expert_path = self.target_formal_expert_path
             self.create_functional_modules(use_avg_lora)
-            self.source_formal_expert_path = "/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langger/checkpoint-17"
-            self.create_functional_modules(use_avg_lora)
+            self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert')
+            cluster_checkpoint_names["target_formal_expert"] = self.target_formal_expert_path
+            print(cluster_checkpoint_names)
         else:
             self.create_functional_modules(use_avg_lora)
             self.create_cross_lingual_expert()
 
-        if use_avg_lora:
-            self.base_model.delete_adapter('average')
+        # if use_avg_lora:
+        #     self.base_model.delete_adapter('average')
