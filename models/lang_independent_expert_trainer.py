@@ -87,8 +87,8 @@ class LangIndependentExpertTrainer(ExpertTrainer):
         return lang_model
 
     def train(self, train_data, eval_data, training_args):
-        train_data = apply_preprocessing(train_data, create_message_column, self.tokenizer, apply_chat_template=True)
-        eval_data = apply_preprocessing(eval_data, create_message_column, self.tokenizer, apply_chat_template=True)
+        train_data = apply_preprocessing(train_data, create_message_column, self.tokenizer, add_generation_prompt=True)
+        eval_data = apply_preprocessing(eval_data, create_message_column, self.tokenizer, add_generation_prompt=True)
 
         trainer = LangIndependentSFTTrainer(
             model=self.model,

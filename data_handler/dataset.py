@@ -167,11 +167,11 @@ def create_message_column_for_test(row):
     return {"messages": messages}
 
 
-def apply_preprocessing(data, prompt_func, tokenizer, apply_chat_template=False):
+def apply_preprocessing(data, prompt_func, tokenizer, add_generation_prompt=False):
     data = data.map(prompt_func)
     data = data.map(
         lambda sample:
         {"text": tokenizer.apply_chat_template(
-            sample["messages"], add_generation_prompt=apply_chat_template, tokenize=False)}
+            sample["messages"], add_generation_prompt=add_generation_prompt, tokenize=False)}
     )
     return data
