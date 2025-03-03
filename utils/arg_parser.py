@@ -27,7 +27,7 @@ def experts_training_arg_parser():
     parser.add_argument("--scheduler", type=str, default="cosine", choices=["linear", "cosine", "cosine_restarts"])
     parser.add_argument("--activation_checkpointing", action="store_true")
     parser.add_argument("--weight_decay", type=float, default=0.0)
-    parser.add_argument("--warmup_ratio", type=int, default=0.03)
+    parser.add_argument("--warmup_ratio", type=float, default=0.03)
     parser.add_argument("--eval_every", type=int, default=1000)
     parser.add_argument("--log_every", type=int, default=100)
 
