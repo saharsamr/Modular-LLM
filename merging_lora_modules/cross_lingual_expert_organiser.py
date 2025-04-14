@@ -15,6 +15,8 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
             source_formal_expert_path, target_formal_expert_path,
             method, alpha=1, beta=1, load_single_expert=False, cluster_name=None
     ):
+        
+        # print(base_model, tokenizer, model_name, source_formal_expert_path, target_formal_expert_path, method, alpha, beta, load_single_expert, cluster_name)
         super().__init__(base_model, tokenizer, model_name)
 
         self.source_formal_expert_path = source_formal_expert_path
@@ -53,6 +55,84 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                 module.lora_A["average"].weight = torch.nn.Parameter(avg_A)
                 module.lora_B["average"].weight = torch.nn.Parameter(avg_B)
 
+    def diff(self):
+        self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
+        self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert')
+
+        ols = {}
+        qkvls = {}
+
+        for name, module in self.base_model.named_modules():
+            # print()
+            if isinstance(module, LoraLayer):
+                # for adapter_name in self.cluster_names.keys():
+                A = torch.nn.Parameter(
+                    module.lora_A['source_formal_expert'].weight - module.lora_A['target_formal_expert'].weight)
+                B = torch.nn.Parameter(
+                    module.lora_B['source_formal_expert'].weight - module.lora_B['target_formal_expert'].weight)
+                    
+                # print(name, module)
+                # print(module.weight)
+                # print(A.shape, B.shape)
+
+                B_transposed = B.t()  
+                A_transposed = A.t()
+
+                # print(A_transposed.shape, B_transposed.shape)  
+
+                # Perform matrix multiplication
+                result = torch.matmul(A_transposed, B_transposed)
+
+                if 'o_proj' in name:
+                    ols[name] = torch.norm(result.float(), p=2)
+                elif 'qkv_proj' in name:
+                    qkvls[name] = torch.norm(result.float(), p=2)
+
+        l1 = 'Vit'
+        l2 = 'English'
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        # print(ols)
+
+        layers = ols.keys()
+
+        # Plot the SI values
+        plt.figure(figsize=(25, 10))
+        plt.plot([u.item() for u in ols.values()], label=f'Norm of {l1} - {l2}', marker='o')
+        plt.xticks(np.arange(len(layers)), layers, rotation=45, ha='right')
+        plt.xlabel('Layers')
+        plt.ylabel('Norm of subtraction')
+        plt.title(f'Norm of {l1} and {l2} language experts subtraction in different layers')
+        plt.legend()
+        plt.tight_layout()
+        
+        # Save the figure instead of displaying it
+        plt.savefig(f'norm_difference_o_{l1}-{l2}.png', dpi=300)  # Saves the image as 'norm_difference.png' with high resolution
+        plt.close()  # Close the figure to free memory
+
+
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        layers = qkvls.keys()
+
+        # Plot the SI values
+        plt.figure(figsize=(25, 10))
+        plt.plot([u.item() for u in qkvls.values()], label=f'Norm of {l1} - {l2}', marker='o')
+        plt.xticks(np.arange(len(layers)), layers, rotation=45, ha='right')
+        plt.xlabel('Layers')
+        plt.ylabel('Norm of subtraction')
+        plt.title(f'Norm of {l1} and {l2} language experts subtraction in different layers')
+        plt.legend()
+        plt.tight_layout()
+        
+        # Save the figure instead of displaying it
+        plt.savefig(f'norm_difference_qkv_{l1}-{l2}.png', dpi=300)  # Saves the image as 'norm_difference.png' with high resolution
+        plt.close()  # Close the figure to free memory
+
+
     def create_functional_modules(self, use_avg_lora):
         self.base_model.load_adapter(self.source_formal_expert_path, adapter_name='source_formal_expert')
         
@@ -62,14 +142,14 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                     for adapter_name in self.cluster_names.keys():
                         if use_avg_lora:
                             module.lora_A[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_A[adapter_name].weight - module.lora_A['average'].weight)
+                                module.lora_A[adapter_name].weight - (1/1)*module.lora_A['average'].weight)
                             module.lora_B[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_B[adapter_name].weight - module.lora_B['average'].weight)
+                                module.lora_B[adapter_name].weight - (1/1)*module.lora_B['average'].weight)
                         else:
                             module.lora_A[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
+                                module.lora_A[adapter_name].weight - (1/3)*module.lora_A['source_formal_expert'].weight)
                             module.lora_B[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
+                                module.lora_B[adapter_name].weight - (1/3)*module.lora_B['source_formal_expert'].weight)
 
         elif self.method == 'orthogonal_projection':
             for module in self.base_model.modules():
@@ -117,12 +197,15 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
 
         if add_functional_only:
             # TODO: add 3 level if elif else
-            self.create_functional_modules(use_avg_lora)
-            self.source_formal_expert_path = self.target_formal_expert_path
-            self.create_functional_modules(use_avg_lora)
-            self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert')
-            cluster_checkpoint_names["target_formal_expert"] = self.target_formal_expert_path
-            print(cluster_checkpoint_names)
+            # self.diff()
+            self.create_functional_modules(use_avg_lora) # Isolating from source lang
+            # self.source_formal_expert_path = self.target_formal_expert_path
+            # self.create_functional_modules(use_avg_lora) # Isolating from target lang
+            # self.source_formal_expert_path = "/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langenopus/checkpoint-248"
+            # self.create_functional_modules(use_avg_lora) 
+            # self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert') # Adding target language as the 11th adapter
+            # cluster_checkpoint_names["target_formal_expert"] = self.target_formal_expert_path
+            # print(cluster_checkpoint_names)
         else:
             self.create_functional_modules(use_avg_lora)
             self.create_cross_lingual_expert()

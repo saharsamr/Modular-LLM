@@ -67,7 +67,7 @@ def experts_testing_arg_parser():
 def experts_merging_arg_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--model_name", type=str, default="microsoft/Phi-3-mini-4k-instruct")
+    parser.add_argument("--model_name", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster11_batch1_prop1.0_langvit/checkpoint-1079/")
     parser.add_argument("--project_name", type=str, default='Modular-LLM')
     parser.add_argument(
         "--merging_strategy", type=str, required=True,
@@ -87,12 +87,22 @@ def experts_merging_arg_parser():
 
     # cross_lingual parser arguments
     parser.add_argument("--posthoc_cross_lingual", action="store_true")
-    parser.add_argument("--target_lang", type=str, default='de')
+    parser.add_argument("--target_lang", type=str, default='en')
     parser.add_argument("--factorize_average_lora", action="store_true")
-    parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langen/checkpoint-17")
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langenopus/checkpoint-248") # en book
+    parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langdeopus/checkpoint-180") # de book
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langfropus/checkpoint-192") # fr book
+    parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langfropus/checkpoint-192")
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langenc4/checkpoint-507") # en c4
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langdec4/checkpoint-507") # de c4
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langfrc4/checkpoint-507")
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langfrc4/checkpoint-507") # fr c4
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch8_prop1.0_langdec4/checkpoint-507") # de c4
+    # parser.add_argument("--source_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langen/checkpoint-17") #English
     # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langar/checkpoint-8") #Arabic
     # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langfr/checkpoint-35") #French
-    parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langger/checkpoint-17") #German
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langger/checkpoint-17") #German
+    # parser.add_argument("--target_formal_expert_path", type=str, default="/home/tmptildec/Ali/Modular-LLM-LE/scripts/results/cluster0_batch16_prop1.0_langvit/checkpoint-15") #Vietnamese
     parser.add_argument("--disentanglement_method", type=str, choices=['subtract', 'orthogonal_projection'])
     parser.add_argument("--add_functional_only", type=bool, default=False)
 

@@ -91,7 +91,7 @@ def evaluate_on_multi_choice_lan(eval_dataset, model, tokenizer, ds_name, routin
             tokenized_text = tokenizer(
                 text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
             if routing_strategy == 'arrow_routing':
-                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=6).logits
+                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
             else:
                 logits = model(tokenized_text['input_ids']).logits
             loss = compute_loglike_loss(logits, tokenized_text['labels'])
@@ -159,16 +159,21 @@ if __name__ == "__main__":
     else:
         raise f'{args.merging_strategy} is not supported.'
 
-    # routing_test_dataset = read_test_dataset(args.dataset_name)
-    # routing_test_dataset = routing_test_dataset.train_test_split(test_size=400, seed=args.seed)['test']
+    routing_test_dataset = read_test_dataset(args.dataset_name)
+    # routing_test_dataset = routing_test_dataset.train_test_split(test_size=2500, seed=args.seed)['test']
 
-    routing_test_dataset = read_test_dataset_lang(args.dataset_name, args.target_lang)
+    # routing_test_dataset = read_test_dataset_lang(args.dataset_name, args.target_lang)
     # routing_test_dataset = routing_test_dataset.train_test_split(test_size=1200, seed=args.seed)['test']
-    print(strategy_model)
+    # print(strategy_model) 
 
     labels, predictions = [], []
     with torch.no_grad():
         if args.dataset_name in multi_choice_datasets:
-            evaluate_on_multi_choice_lan(
+            evaluate_on_multi_choice(
                 routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
             )
+
+        # if args.dataset_name in multi_choice_datasets:
+        #     evaluate_on_multi_choice_lan(
+        #         routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
+        #     )

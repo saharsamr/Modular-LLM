@@ -1,5 +1,6 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 import re
+import random
 
 bbh_subsets = [
     'boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa',
@@ -60,39 +61,39 @@ def load_bbh_dataset():
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
-        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('ybisk/piqa', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/google/boolq
     elif ds_name == 'boolq':
-        ds = load_dataset('google/boolq', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('google/boolq', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/swag
     elif ds_name == 'swag':
-        ds = load_dataset('allenai/swag', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('allenai/swag', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/Rowan/hellaswag?row=0
     elif ds_name == 'hswag':
-        ds = load_dataset('Rowan/hellaswag', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('Rowan/hellaswag', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-challenge':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-easy':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/openbookqa?row=0
     elif ds_name == 'oqa':
-        ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('allenai/openbookqa', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/maveriq/bigbenchhard
     elif ds_name == 'bbh':
         ds = load_bbh_dataset()
     # https://huggingface.co/datasets/allenai/winogrande
     elif ds_name == 'wg':
-        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='validation', trust_remote_code=True)
+        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/openai/openai_humaneval
     elif ds_name == 'he':
-        ds = load_dataset('openai/openai_humaneval', cache_dir='../data/', split='test', trust_remote_code=True)
+        ds = load_dataset('openai/openai_humaneval', cache_dir='../../data/', split='test', trust_remote_code=True)
     # https://huggingface.co/datasets/google-research-datasets/mbpp
     elif ds_name == 'mbpp':
-        ds = load_dataset('google-research-datasets/mbpp', cache_dir='../data/', split='full', trust_remote_code=True)
+        ds = load_dataset('google-research-datasets/mbpp', cache_dir='../../data/', split='full', trust_remote_code=True)
     elif ds_name == 'flan':
-        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/", trust_remote_code=True)['test']
+        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../../data/", trust_remote_code=True)['test']
     else:
         raise f"Dataset {ds_name} is not supported yet."
 
@@ -210,5 +211,11 @@ def extract_multi_choice_target_index(row, ds_name):
         return row['choices']['label'].index(row['answerKey'])
     if ds_name == 'bbh':
         choices = get_bbh_options(row)
-        return choices.index(row['target'])
+        ires = 0
+        try:
+            ires = choices.index(row['target'])
+        except Exception as e:
+            print(e)
+            ires = random.choice([i for i in range(len(choices))])
+        return ires
 
