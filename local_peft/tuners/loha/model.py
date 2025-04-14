@@ -19,7 +19,7 @@ from typing import Dict, Type, Union
 import torch
 from torch import nn
 
-from peft.tuners.lycoris_utils import LycorisConfig, LycorisTuner
+from local_peft.tuners.lycoris_utils import LycorisConfig, LycorisTuner
 
 from .layer import Conv2d, Linear, LoHaLayer
 

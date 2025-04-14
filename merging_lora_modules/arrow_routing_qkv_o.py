@@ -15,11 +15,6 @@ class ArrowRouting(BaseMergingModule):
 
         if load_lora_modules:
             self.load_lora_modules()
-            # same_weight = self.check_model_weights_difference()
-            # if same_weight:
-            #     print("The weights are similar.")
-            # else:
-            #     print("The weights are not similar.")
         
 
     def _low_rank_svd(self, A, B):
@@ -53,31 +48,32 @@ class ArrowRouting(BaseMergingModule):
         """
         This is the function responsible for computing prototype of the experts, after all the experts are loaded.
         """
+        
+        expert_counter = 0
     
         # As we iterate, each layer of model include 4 LoRA layer, q_proj, k_proj, v_proj, dense
         for name, module in self.base_model.named_modules():
             if isinstance(module, LoraLayer): 
+                print(name)
                 # ** module.lora_A is a dict
-                if "q_proj" in name:
+                if expert_counter % 4 == 0:
                     q_proj = module
-                elif "k_proj" in name:
+                elif expert_counter % 4 == 1:
                     k_proj = module
-                elif "v_proj" in name:
+                elif expert_counter % 4 == 2: # We start to compute the qkv prototype
                     v_proj = module
-                elif "dense" in name: # We should start to compute the layer's prototype when we get dense
-                    dense = module
                     for adapter_name in cluster_checkpoint_names.keys():
                         # Each lora_a weight shape: [8, 2560]
-                        # concat_expert_A shape: [32, 2560]
-                        # concat_expert_B shape: [2560, 32]
-                        concat_expert_A = torch.cat((q_proj.lora_A[adapter_name].weight, k_proj.lora_A[adapter_name].weight, v_proj.lora_A[adapter_name].weight, dense.lora_A[adapter_name].weight), dim=0)
-                        concat_expert_B = torch.cat((q_proj.lora_B[adapter_name].weight, k_proj.lora_B[adapter_name].weight, v_proj.lora_B[adapter_name].weight, dense.lora_B[adapter_name].weight), dim=1)
-
+                        # concat_expert_A shape: [24, 2560]
+                        # concat_expert_B shape: [2560, 24]
+                        concat_expert_A = torch.cat((q_proj.lora_A[adapter_name].weight, k_proj.lora_A[adapter_name].weight, v_proj.lora_A[adapter_name].weight), dim=0)
+                        concat_expert_B = torch.cat((q_proj.lora_B[adapter_name].weight, k_proj.lora_B[adapter_name].weight, v_proj.lora_B[adapter_name].weight), dim=1)
+                        
                         A = concat_expert_A.T
                         B = concat_expert_B.T
                         
                         # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
-                        W = (A @ B)  # out_features, in_features
+                        W = (A @ B).T  # out_features, in_features
 
                         U_W, Sigma_W, V_W = self._low_rank_svd(A, B)
                         top_value = Sigma_W[0] ** 2
@@ -87,7 +83,7 @@ class ArrowRouting(BaseMergingModule):
                         # print(top_vector.shape)
 
                         # Check that top vector is indeed an eigenvector
-                        WTW = W @ W.T
+                        WTW = W.T @ W
                         ratio = WTW @ top_vector / (top_vector * top_value)
                         torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
 
@@ -96,11 +92,42 @@ class ArrowRouting(BaseMergingModule):
                         #     2
                         # ).sum()
                         
-                        q_proj.experts_prototype[adapter_name] = top_vector.detach()
-                        k_proj.experts_prototype[adapter_name] = top_vector.detach()
-                        v_proj.experts_prototype[adapter_name] = top_vector.detach()
-                        dense.experts_prototype[adapter_name] = top_vector.detach()
+                        q_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                        k_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                        v_proj.experts_prototype[adapter_name] = first_right_singular_vector.detach()
+                    
+                elif expert_counter % 4 == 3: # We start to compute the dense layer prototype
+                    dense = module
+                    for adapter_name in cluster_checkpoint_names.keys():
+                        # lora_a weight shape: [8, 2560]
+                        # lora_b weight shape: [2560, 8]
+                        
+                        A = dense.lora_A[adapter_name].weight.T
+                        B = dense.lora_B[adapter_name].weight.T
+                        
+                        # Finding the prototypes in each layer (a.k.a LoRA layer, which is 2 in each model's layer)
+                        W = (A @ B).T  # out_features, in_features
+
+                        U_W, Sigma_W, V_W = self._low_rank_svd(A, B)
+                        top_value = Sigma_W[0] ** 2
+                        first_right_singular_vector = V_W.T[:, 0]
+                        top_vector = U_W[:, 0]
+                        # print(first_right_singular_vector.shape)
+                        # print(top_vector.shape)
+
+                        # Check that top vector is indeed an eigenvector
+                        WTW = W.T @ W
+                        ratio = WTW @ top_vector / (top_vector * top_value)
+                        torch.allclose(ratio, torch.ones_like(ratio), atol=1e-3)
+
+                        # Check that top vector is indeed the top eigenvector
+                        # assert (WTW @ top_vector).pow(2).sum() > (WTW @ bottom_vector).pow(
+                        #     2
+                        # ).sum()
+                        
+                        dense.experts_prototype[adapter_name] = first_right_singular_vector.detach()
                 
+                expert_counter += 1
 
         print("The experts prototype have been computed successfully.")
 
@@ -144,6 +171,10 @@ def compute_weight(current_input, experts_prototypes, top_k):
     """
     This function computes the coefficients for each expert in each layer.
     """
+
+    # Assuming the following variables are defined:
+    # experts_prototypes: dict of expert_name -> tensor of shape [model_dim]
+    # current_input: tensor of shape [batch_size, token_num, model_dim]
 
     # Step 1: Stack all expert prototypes into a tensor
     # Shape: [num_experts, model_dim]

@@ -29,7 +29,7 @@ from safetensors import SafetensorError, safe_open
 from transformers.utils import cached_file
 from transformers.utils.hub import get_checkpoint_shard_files
 
-from peft.import_utils import is_bnb_4bit_available, is_bnb_available
+from local_peft.import_utils import is_bnb_4bit_available, is_bnb_available
 
 
 class NFQuantizer:

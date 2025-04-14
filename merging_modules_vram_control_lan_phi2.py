@@ -14,7 +14,10 @@ from data_handler.test_datasets import (
     read_test_dataset,
     create_multi_choice_options,
     extract_multi_choice_target_index,
-    split_dataset_by_option_count
+    split_dataset_by_option_count,
+    create_multi_choice_options_multilingual,
+    extract_multi_choice_target_index_multilingual,
+    read_test_dataset_lang
 )
 from merging_lora_modules.arrow_routing import ArrowRouting
 from merging_lora_modules.simple_averaging import SimpleAveraging
@@ -30,8 +33,7 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-
-def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
+def compute_loglike_loss(logits, labels, reduction="none"):
     bs = logits.size(0)
     vocab_size = logits.size(-1)
     labels = labels.squeeze(-1)
@@ -39,7 +41,7 @@ def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
     shift_labels = labels[..., 1:].contiguous()
 
     # Flatten the tokens
-    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction, ignore_index=pad_index)
+    loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction)
     shift_logits = shift_logits.view(-1, vocab_size)
     shift_labels = shift_labels.view(-1)
 
@@ -55,6 +57,77 @@ def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
         loss = loss.sum(dim=-1) / non_zero_loss
     return loss
 
+
+# def compute_loglike_loss(logits, labels, pad_index, reduction="none"):
+#     bs = logits.size(0)
+#     vocab_size = logits.size(-1)
+#     labels = labels.squeeze(-1)
+#     shift_logits = logits[..., :-1, :].contiguous()
+#     shift_labels = labels[..., 1:].contiguous()
+
+#     # Flatten the tokens
+#     loss_fct = torch.nn.CrossEntropyLoss(reduction=reduction, ignore_index=pad_index)
+#     shift_logits = shift_logits.view(-1, vocab_size)
+#     shift_labels = shift_labels.view(-1)
+
+#     shift_labels = shift_labels.to(shift_logits.device)
+#     loss = loss_fct(shift_logits, shift_labels)
+
+#     # reshape back
+#     if reduction == "none":
+#         loss = loss.view((bs, -1))
+#         # mean only non-zero
+#         non_zero_loss = (loss != 0).sum(dim=-1)
+#         non_zero_loss[non_zero_loss == 0] = 1
+#         loss = loss.sum(dim=-1) / non_zero_loss
+#     return loss
+
+multi_choice_multilingual_datasets = ['arc-challenge', 'hswag', 'xnli', 'mmlu']
+
+def evaluate_on_multi_choice_lang(eval_dataloader_list, model, tokenizer, ds_name, routing_strategy):
+    predictions, labels = [], []
+    for data_loader in eval_dataloader_list:
+        for i, batch in tqdm(enumerate(data_loader), total=len(data_loader)):
+            batch_options = create_multi_choice_options_multilingual(batch, ds_name)
+            batch_option_count = [len(sample) for sample in batch_options]
+            batch_options = [option for sample in batch_options for option in sample]
+            tokenized_text = tokenizer(
+                    text=batch_options, text_target=batch_options, padding=True, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+            if routing_strategy == 'arrow_routing':
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask'], compute_arrow_weights=True, top_k=4).logits
+            else:
+                logits = model(tokenized_text['input_ids'], tokenized_text['attention_mask']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'], pad_index=tokenizer.pad_token_id).to('cpu')
+
+            start = 0
+            for option_count in batch_option_count:
+                predictions.append(int(np.argmin(loss[start:start+option_count])))
+                start += option_count
+            labels.extend(extract_multi_choice_target_index_multilingual(batch, args.dataset_name))
+
+    print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
+          f'{accuracy_score(labels, predictions)}')
+
+def evaluate_on_multi_choice_multilingual(eval_dataset, model, tokenizer, ds_name, routing_strategy):
+    for i, sample in tqdm(enumerate(eval_dataset), total=len(eval_dataset)):
+        options = create_multi_choice_options_multilingual(sample, ds_name)
+        option_losses = []
+        for option in options:
+            tokenized_text = tokenizer(
+                text=option, text_target=option, return_tensors='pt', truncation=True, max_length=512).to('cuda')
+            if routing_strategy == 'arrow_routing':
+                logits = model(tokenized_text['input_ids'], compute_arrow_weights=True, top_k=3).logits
+            else:
+                logits = model(tokenized_text['input_ids']).logits
+            loss = compute_loglike_loss(logits, tokenized_text['labels'])
+            option_losses.append(loss.to('cpu'))
+
+        labels.append(extract_multi_choice_target_index_multilingual(sample, args.dataset_name))
+        predictions.append(np.argmin(option_losses))
+
+    print(f'Accuracy for dataset {args.dataset_name} and strategy {args.merging_strategy} is: '
+          f'{accuracy_score(labels, predictions)}')
+    
 
 multi_choice_datasets = ['piqa', 'boolq', 'swag', 'hswag', 'arc-easy', 'arc-challenge', 'wg', 'oqa', 'bbh']
 
@@ -150,14 +223,15 @@ if __name__ == "__main__":
 
     strategy_model.eval()
 
-    routing_test_dataset = read_test_dataset(args.dataset_name)
-    # routing_test_dataset = routing_test_dataset.train_test_split(test_size=500, seed=args.seed)['test']
-    dataset_list = split_dataset_by_option_count(routing_test_dataset, args.dataset_name)
-    data_loader_list = [torch.utils.data.DataLoader(ds, batch_size=1) for ds in dataset_list]
+    # routing_test_dataset = read_test_dataset(args.dataset_name)
+    routing_test_dataset = read_test_dataset_lang(args.dataset_name, args.target_lang)
+    routing_test_dataset = routing_test_dataset.train_test_split(test_size=1200, seed=args.seed)['test']
+    # dataset_list = split_dataset_by_option_count(routing_test_dataset, args.dataset_name)
+    # data_loader_list = [torch.utils.data.DataLoader(ds, batch_size=1) for ds in dataset_list]
 
     labels, predictions = [], []
     with torch.no_grad():
-        if args.dataset_name in multi_choice_datasets:
-            evaluate_on_multi_choice(
-                data_loader_list, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
+        if args.dataset_name in multi_choice_multilingual_datasets:
+            evaluate_on_multi_choice_multilingual(
+                routing_test_dataset, strategy_model, tokenizer, args.dataset_name, args.merging_strategy
             )

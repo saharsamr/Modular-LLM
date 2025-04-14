@@ -20,8 +20,8 @@ from typing import Literal, Optional, Union
 
 from torch import nn
 
-from peft.config import PeftConfig
-from peft.utils import PeftType
+from local_peft.config import PeftConfig
+from local_peft.utils import PeftType
 
 
 @dataclass

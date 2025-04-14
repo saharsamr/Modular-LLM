@@ -431,6 +431,8 @@ class Linear(nn.Module, LoraLayer):
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
 
+        self.experts_prototype = {} ## prototype of the experts that should be computed once in the beginning
+
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
         Merge the active adapter weights into the base weights
@@ -561,8 +563,14 @@ class Linear(nn.Module, LoraLayer):
         return output_tensor
 
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
+        from utils.config import cluster_checkpoint_names
+        from merging_lora_modules.arrow_routing import _low_rank_svd, compute_weight
+
+
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
+        compute_arrow_weights = kwargs.pop("compute_arrow_weights", None)
+        top_k = kwargs.pop("top_k", None)
 
         if self.disable_adapters:
             if self.merged:
@@ -573,32 +581,100 @@ class Linear(nn.Module, LoraLayer):
         elif self.merged:
             result = self.base_layer(x, *args, **kwargs)
         else:
+            if compute_arrow_weights == True:
+                
+                if len(self.experts_prototype) == 0:
+                    ## Computing experts prototype
+                    raise NotImplementedError("Prototypes shouldn't be computed in forward path!")
+
+                arrow_weights = compute_weight(x, self.experts_prototype, top_k).to(device='cuda:0') # shape: (batch, seq_len, expert_num)
+        
+                # Step 1: Stack all adapter weights
+                adapter_names = list(cluster_checkpoint_names.keys())
+
+                # Stack lora_A weights: [num_adapters, in_features, 8]
+                lora_A = torch.stack([self.lora_A[name].weight for name in adapter_names], dim=0)
+
+                # Stack lora_B weights: [num_adapters, 8, out_features]
+                lora_B = torch.stack([self.lora_B[name].weight for name in adapter_names], dim=0)
+
+                # Step 2: Transpose arrow_weights to [batch_size, num_adapters, seq_length]
+                arrow_weights_transposed = arrow_weights.transpose(1, 2)  # Adjust dimensions as needed
+
+                # Step 3: Compute weighted_adapter_mat_A and weighted_adapter_mat_B using einsum
+                # weighted_adapter_mat_A: [batch_size, num_adapters, seq_length, in_features, 8]
+                weighted_adapter_mat_A = torch.einsum(
+                    'ban,aid->b a n i d',
+                    arrow_weights_transposed,      # [batch_size, num_adapters, seq_length]
+                    lora_A                         # [num_adapters, in_features, 8]
+                )
+
+                # weighted_adapter_mat_B: [num_adapters, batch_size, seq_length, 8, out_features]
+                weighted_adapter_mat_B = torch.einsum(
+                    'ban,ado->b a n d o',
+                    arrow_weights_transposed,      # [batch_size, num_adapters, seq_length]
+                    lora_B                         # [num_adapters, 8, out_features]
+                )
+
+                # Step 4: Permute dimensions to match the desired shape
+                # If needed, adjust the permutation to match [num_adapters, batch_size, seq_length, ..., ...]
+                weighted_adapter_mat_A = weighted_adapter_mat_A.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, in_features, 8]
+                weighted_adapter_mat_B = weighted_adapter_mat_B.permute(1, 0, 2, 3, 4)  # [num_adapters, batch_size, seq_length, 8, out_features]
+
+                # Now, weighted_adapter_mat_A and weighted_adapter_mat_B are fully computed without explicit loops
+
+
+                # Now we take sum along expert dimension
+                self.merged_lora_A = torch.sum(weighted_adapter_mat_A, dim=0)
+                self.merged_lora_B = torch.sum(weighted_adapter_mat_B, dim=0)
+                
+                
+
+            # Now we should complete the forward path w.r.t the corresponding weights:
             result = self.base_layer(x, *args, **kwargs)
-            torch_result_dtype = result.dtype
-            for active_adapter in self.active_adapters:
-                if active_adapter not in self.lora_A.keys():
-                    continue
-                lora_A = self.lora_A[active_adapter]
-                lora_B = self.lora_B[active_adapter]
-                dropout = self.lora_dropout[active_adapter]
-                scaling = self.scaling[active_adapter]
-                x = x.to(lora_A.weight.dtype)
+            result = result.clone()
 
-                if not self.use_dora[active_adapter]:
-                    result = result + lora_B(lora_A(dropout(x))) * scaling
-                else:
-                    x = dropout(x)
-                    result = result + self.lora_magnitude_vector[active_adapter](
-                        x,
-                        lora_A=lora_A,
-                        lora_B=lora_B,
-                        scaling=scaling,
-                        base_layer=self.get_base_layer(),
-                    )
+            # Initialising scaling and dropout for the new adapter
+            scaling = self.scaling['cluster0']
+            dropout = torch.nn.Dropout(p=0.05, inplace=False)
+            
+            requires_conversion = not torch.is_autocast_enabled()
+            if requires_conversion:
+                expected_dtype = result.dtype
+                x = x.to(self.merged_lora_A.dtype)
+            
+            x = dropout(x)
+            # x shape is: (batch, token_num, model_dim)
+            # lora_A shape is: (batch, token_num, model_dim, rank)
+            # lora_B shape is: (batch, token_num, rank, model_dim)
+            if result.shape[1] == 1:
+                ## Generation case
+                # x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A[:, self.token_gen_counter].unsqueeze(1).to(device='cuda:0'))
+                # x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B[:, self.token_gen_counter].unsqueeze(1).to(device='cuda:0'))
+                # self.token_gen_counter += 1
+                # if self.token_gen_counter >= self.merged_lora_A.shape[1]:
+                #     self.token_gen_counter = 0
+                x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.mean(1, True).to(device='cuda:0'))
+                x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.mean(1, True).to(device='cuda:0')) 
 
-            result = result.to(torch_result_dtype)
+            else:
+                # print(x.shape)
+                # print(self.merged_lora_A.shape)
+                # print(self.merged_lora_B.shape)
+                x = torch.einsum('btd,btdr->btr', x, self.merged_lora_A.transpose(2,3).to(device='cuda:0'))
+                x = torch.einsum('btr,btrd->btd', x, self.merged_lora_B.transpose(2,3).to(device='cuda:0')) 
+
+            output = x * scaling
+
+            if requires_conversion:
+                output = output.to(expected_dtype)
+
+            # print('result shape is: {}'.format(result.shape))
+            # print('output shape is: {}'.format(output.shape))
+            result = result + output
 
         return result
+        
 
     def __repr__(self) -> str:
         rep = super().__repr__()

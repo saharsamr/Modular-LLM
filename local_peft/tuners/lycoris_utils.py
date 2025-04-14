@@ -22,8 +22,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from peft.config import PeftConfig
-from peft.utils import (
+from local_peft.config import PeftConfig
+from local_peft.utils import (
     ModulesToSaveWrapper,
     _get_submodules,
 )

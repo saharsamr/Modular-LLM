@@ -5,15 +5,15 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from local_peft.tuners.lora.layer import LoraLayer
 from merging_lora_modules.base_merging_module import BaseMergingModule, cluster_checkpoint_names
-from peft import PeftModel
+from local_peft import PeftModel
 import torch
 
-
+# alpha beta expriments  alpha=0.5, beta=0.5, 
 class CrossLingualExpertOrganiser(BaseMergingModule):
     def __init__(
             self, base_model, tokenizer, model_name,
             source_formal_expert_path, target_formal_expert_path,
-            method, alpha=0.5, beta=0.5, load_single_expert=False, cluster_name=None
+            method, alpha=1, beta=1, load_single_expert=False, cluster_name=None
     ):
         super().__init__(base_model, tokenizer, model_name)
 
@@ -62,14 +62,14 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                     for adapter_name in self.cluster_names.keys():
                         if use_avg_lora:
                             module.lora_A[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_A[adapter_name].weight - module.lora_A['average'].weight)
+                                module.lora_A[adapter_name].weight - (1/3)*module.lora_A['average'].weight)
                             module.lora_B[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_B[adapter_name].weight - module.lora_B['average'].weight)
+                                module.lora_B[adapter_name].weight - (1/3)*module.lora_B['average'].weight)
                         else:
                             module.lora_A[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_A[adapter_name].weight - module.lora_A['source_formal_expert'].weight)
+                                module.lora_A[adapter_name].weight - (1/3)*module.lora_A['source_formal_expert'].weight)
                             module.lora_B[adapter_name].weight = torch.nn.Parameter(
-                                module.lora_B[adapter_name].weight - module.lora_B['source_formal_expert'].weight)
+                                module.lora_B[adapter_name].weight - (1/3)*module.lora_B['source_formal_expert'].weight)
 
         elif self.method == 'orthogonal_projection':
             for module in self.base_model.modules():
@@ -94,7 +94,13 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
                         module.lora_A[adapter_name].weight = torch.nn.Parameter(mixed_expert_A.T - mixed_project_on_formal_A.T)
                         module.lora_B[adapter_name].weight = torch.nn.Parameter(mixed_expert_B - mixed_project_on_formal_B)
 
+        else:
+            print("No valid disentanglement method.")
+            raise NameError
+        
         self.base_model.delete_adapter("source_formal_expert")
+
+        print("Functional expert has been created.")
     
     def create_cross_lingual_expert(self):
         self.base_model.load_adapter(self.target_formal_expert_path, adapter_name='target_formal_expert')
@@ -102,16 +108,22 @@ class CrossLingualExpertOrganiser(BaseMergingModule):
         for module in self.base_model.modules():
             if isinstance(module, LoraLayer):
                 for adapter_name in self.cluster_names.keys():
-                    module.lora_A[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_A[adapter_name].weight + self.beta * module.lora_A['target_formal_expert'].weight)
-                    module.lora_B[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_B[adapter_name].weight + self.beta * module.lora_B['target_formal_expert'].weight)
+                    module.lora_A[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_A[adapter_name].weight - self.beta * module.lora_A['target_formal_expert'].weight)
+                    module.lora_B[adapter_name].weight = torch.nn.Parameter(self.alpha * module.lora_B[adapter_name].weight - self.beta * module.lora_B['target_formal_expert'].weight)
 
         self.base_model.delete_adapter("target_formal_expert")
+
+        print("Cross Lingual Experts have been created.")
 
     def merge(self, add_functional_only, use_avg_lora=False):
         if use_avg_lora:
             self.average_lora_modules()
 
         if add_functional_only:
+            self.create_functional_modules(use_avg_lora)
+            self.source_formal_expert_path = self.target_formal_expert_path
+            self.create_functional_modules(use_avg_lora)
+            self.source_formal_expert_path = "/home/tmptildec/Ali/phi2_le/Modular-LLM/scripts/results/phi2/lan_expert_en_lora_test/checkpoint-27000"
             self.create_functional_modules(use_avg_lora)
         else:
             self.create_functional_modules(use_avg_lora)

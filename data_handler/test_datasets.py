@@ -1,5 +1,6 @@
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 import re
+import random
 
 bbh_subsets = [
     'boolean_expressions', 'causal_judgement', 'date_understanding', 'disambiguation_qa',
@@ -20,15 +21,15 @@ ignored_bbh_subsets = [
 def read_test_dataset_lang(ds_name, lang):
     # lang: de (germany)
     if ds_name == 'arc-challenge':
-        ds = load_dataset("alexandrainst/m_arc", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("alexandrainst/m_arc", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     elif ds_name == 'hswag':
         ds = load_dataset("alexandrainst/m_hellaswag", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     # elif ds_name == 'mgsm':
     #     ds = load_dataset("juletxara/mgsm", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
     elif ds_name == 'xnli':
-        ds = load_dataset("facebook/xnli", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("facebook/xnli", lang, cache_dir='../../data/', split='validation', trust_remote_code=True)
     elif ds_name == 'mmlu':
-        ds = load_dataset("alexandrainst/m_mmlu", lang, cache_dir='../../data/', split='train', trust_remote_code=True)
+        ds = load_dataset("alexandrainst/m_mmlu", lang, cache_dir='../../data/', split='val', trust_remote_code=True)
     else:  # xcopa xnli xquad xlsum  adamergx paper prompts
         raise f"Dataset {ds_name} is not supported yet."
 
@@ -60,64 +61,65 @@ def load_bbh_dataset():
 def read_test_dataset(ds_name):
     # https://huggingface.co/datasets/ybisk/piqa
     if ds_name == 'piqa':
-        ds = load_dataset('ybisk/piqa', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('ybisk/piqa', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/google/boolq
     elif ds_name == 'boolq':
-        ds = load_dataset('google/boolq', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('google/boolq', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/swag
     elif ds_name == 'swag':
-        ds = load_dataset('allenai/swag', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/swag', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/Rowan/hellaswag?row=0
     elif ds_name == 'hswag':
-        ds = load_dataset('Rowan/hellaswag', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('Rowan/hellaswag', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-challenge':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Challenge', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/ai2_arc?row=10
     elif ds_name == 'arc-easy':
-        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/ai2_arc', 'ARC-Easy', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/allenai/openbookqa?row=0
     elif ds_name == 'oqa':
-        ds = load_dataset('allenai/openbookqa', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/openbookqa', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/maveriq/bigbenchhard
     elif ds_name == 'bbh':
         ds = load_bbh_dataset()
     # https://huggingface.co/datasets/allenai/winogrande
     elif ds_name == 'wg':
-        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../data/', split='train', trust_remote_code=True)
+        ds = load_dataset('allenai/winogrande', 'winogrande_xl', cache_dir='../../data/', split='validation', trust_remote_code=True)
     # https://huggingface.co/datasets/openai/openai_humaneval
     elif ds_name == 'he':
-        ds = load_dataset('openai/openai_humaneval', cache_dir='../data/', split='test', trust_remote_code=True)
+        ds = load_dataset('openai/openai_humaneval', cache_dir='../../data/', split='test', trust_remote_code=True)
     # https://huggingface.co/datasets/google-research-datasets/mbpp
     elif ds_name == 'mbpp':
-        ds = load_dataset('google-research-datasets/mbpp', cache_dir='../data/', split='full', trust_remote_code=True)
+        ds = load_dataset('google-research-datasets/mbpp', cache_dir='../../data/', split='full', trust_remote_code=True)
     elif ds_name == 'flan':
-        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../data/", trust_remote_code=True)['test']
+        ds = load_dataset("TahaBa/flan-routing-MoE-dataset", cache_dir="../../data/", trust_remote_code=True)['test']
     else:
         raise f"Dataset {ds_name} is not supported yet."
 
     return ds
 
 
-def extract_input_content(ds_name, row):
+def extract_input_content(ds_name, rows):
     if ds_name == 'piqa':
-        return row['goal']
+        return rows['goal']
     if ds_name == 'boolq':
-        return f"[passage]{row['passage']}[question]{row['question']}"
+        return [f'[passage]{passage}[question]{question}' for passage, question in zip(rows['passage'], rows['question'])]
+        # return f"[passage]{rows['passage']}[question]{rows['question']}"
     if ds_name == 'swag':
-        return row['startphrase']
+        return rows['startphrase']
     if ds_name == 'hswag':
-        return row['ctx']
+        return rows['ctx']
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        return row['question']
+        return rows['question']
     if ds_name == 'oqa':
-        return row['question_stem']
+        return rows['question_stem']
     if ds_name == 'bbh':
-        return row['input']
+        return rows['input']
     if ds_name == 'wg':
-        return row['sentence']
+        return rows['sentence']
     if ds_name == 'flan':
-        return f"{row['source']}"
+        return f"{rows['source']}"
 
 
 def create_multi_choice_options_multilingual(row, ds_name):
@@ -126,11 +128,11 @@ def create_multi_choice_options_multilingual(row, ds_name):
     if ds_name == 'hswag':
         choices = row['endings']
     if ds_name == 'arc-challenge':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
     if ds_name == 'xnli':
-        choices = str(['entailment', 'neutral', 'contradiction'])
+        choices = ['entailment', 'neutral', 'contradiction']
     if ds_name == 'mmlu':
-        choices = str([row['option_a'], row['option_b'], row['option_c'], row['option_d']])
+        choices = [row['option_a'], row['option_b'], row['option_c'], row['option_d']]
 
 
     for choice in choices:
@@ -139,76 +141,142 @@ def create_multi_choice_options_multilingual(row, ds_name):
     return options_texts
 
 
-def get_bbh_options(row):
-    if row['task_name'] == 'boolean_expressions':
-        choices = ['True', 'False']
-    elif (row['task_name'] == 'causal_judgement') or (row['task_name'] == 'navigate') or (row['task_name'] == 'web_of_lies'):
-        choices = ['Yes', 'No']
-    elif row['task_name'] == 'formal_fallacies':
-        choices = ['valid', 'invalid']
-    elif row['task_name'] == 'sports_understanding':
-        choices = ['yes', 'no']
-    elif row['task_name'] in bbh_subsets:
-        choices = re.findall(r'\([A-Z]\)', row['input'])
-    else:
-        raise 'This subset is not supported'
+def get_bbh_options(rows):
+    batch_choices = []
+    for row_input, row_task in zip(rows['input'], rows['task_name']):
+        # print(row_task)
+        if row_task == 'boolean_expressions':
+            choices = ['True', 'False']
+        elif (row_task == 'causal_judgement') or (row_task == 'navigate') or (row_task == 'web_of_lies'):
+            choices = ['Yes', 'No']
+        elif row_task == 'formal_fallacies':
+            choices = ['valid', 'invalid']
+        elif row_task == 'sports_understanding':
+            choices = ['yes', 'no']
+        elif row_task in bbh_subsets:
+            choices = re.findall(r'\([A-Z]\)', row_input)
+        else:
+            raise 'This subset is not supported'
 
-    return choices
+        batch_choices.append(choices)
+
+    return batch_choices
 
 
-def create_multi_choice_options(row, ds_name):
-    options_texts = []
-    content = extract_input_content(ds_name, row)
+def create_multi_choice_options(rows, ds_name):
+    batch_options = []
+    contents = extract_input_content(ds_name, rows)
     if ds_name == 'piqa':
-        choices = [row['sol1'], row['sol2']]
+        choices = [[sol1, sol2] for sol1, sol2 in zip(rows['sol1'], rows['sol2'])]
     if ds_name == 'boolq':
-        choices = ['true', 'false']
+        choices = [['true', 'false'] for _ in rows['passage']]
     if ds_name == 'swag':
-        choices = [row['ending0'], row['ending1'], row['ending2'], row['ending3']]
+        choices = [[e1, e2, e3, e4] for e1, e2, e3, e4 in zip(rows['ending0'], rows['ending1'], rows['ending2'], rows['ending3'])]
     if ds_name == 'hswag':
-        choices = row['endings']
+        choices = [[e[i] for e in rows['endings']] for i in range(len(rows['endings'][0]))]
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        choices = row['choices']['text']
+        choices = [[opts[i] for opts in rows['choices']['text']] for i in range(len(rows['choices']['text'][0]))]
     if ds_name == 'wg':
-        choices = [row['option1'], row['option2']]
+        choices = [[option1, option2] for option1, option2 in zip(rows['option1'], rows['option2'])]
     if ds_name == 'oqa':
-        choices = row['choices']['text']
+        choices = [[opts[i] for opts in rows['choices']['text']] for i in range(len(rows['choices']['text'][0]))]
     if ds_name == 'bbh':
-        choices = get_bbh_options(row)
+        choices = get_bbh_options(rows)
 
-    for choice in choices:
-        options_texts.append(f'<|user|>\n{content}<|end|>\n<|assistant|>{choice}<|end|>\n')
+    batch_options = []
+    for sample_choices, content in zip(choices, contents):
+        sample_options = []
+        for choice in sample_choices:
+            sample_options.append(f"Question: {content}\nAnswer: {choice}")
+        batch_options.append(sample_options)
 
-    return options_texts
+    return batch_options
 
 
 def extract_multi_choice_target_index_multilingual(row, ds_name):
     if ds_name == 'hswag':
         return int(row['label'])
     if ds_name == 'arc-challenge':
-        return ['A', 'B', 'C', 'D'].index(row['answer'])
+        return ['A', 'B', 'C', 'D', 'E'].index(row['answer'])
     if ds_name == 'xnli':
         return int(row['label'])
     if ds_name == 'mmlu':
         return ['A', 'B', 'C', 'D'].index(row['answer'])
 
 
-def extract_multi_choice_target_index(row, ds_name):
+def extract_multi_choice_target_index(rows, ds_name):
     if ds_name == 'piqa':
-        return int(row['label'])
+        return [int(target) for target in rows['label']]
     if ds_name == 'boolq':
-        return 0 if row['answer'] is True else 1
+        return [0 if ans == True else 1 for ans in rows['answer']]
     if ds_name == 'swag':
-        return int(row['label'])
+        return [int(lbl) for lbl in rows['label']]
     if ds_name == 'hswag':
-        return int(row['label'])
+        return [int(lbl) for lbl in rows['label']]
     if (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
-        return row['choices']['label'].index(row['answerKey'])
+        return [[ch[i] for ch in rows['choices']['label']].index(ans) for i, ans in enumerate(rows['answerKey'])]
     if ds_name == 'wg':
-        return int(row['answer']) - 1
+        return [int(ans) - 1 for ans in rows['answer']]
     if ds_name == 'oqa':
-        return row['choices']['label'].index(row['answerKey'])
+        return [[ch[i] for ch in rows['choices']['label']].index(ans) for i, ans in enumerate(rows['answerKey'])]
     if ds_name == 'bbh':
-        choices = get_bbh_options(row)
-        return choices.index(row['target'])
+        choices = get_bbh_options(rows)
+        # return [choice.index(target) for choice, target in zip(choices, rows['target'])]
+        ires = []
+        for choice, target in zip(choices, rows['target']):
+            try:
+                ires.append(choice.index(target))
+            except Exception as e:
+                print(e)
+                ires.append(random.choice([i for i in range(len(choice))]))
+            return ires
 
+
+def split_dataset_by_option_count(ds, ds_name):
+    if ds_name in ['piqa', 'boolq', 'wg', 'swag', 'xnli', 'mmlu']:
+        return [ds]
+
+    if ds_name == 'hswag':
+        option_count = [len(endings) for endings in ds['endings']]
+    elif (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        option_count = [len(choices['label']) for choices in ds['choices']]
+    elif ds_name == 'oqa':
+        option_count = [len(choices['label']) for choices in ds['choices']]
+    elif ds_name == 'bbh':
+        options = get_bbh_options(ds)
+        option_count = [len(sample_options) for sample_options in options]
+    else:
+        raise "Pass a supported dataset"
+
+    ds = ds.add_column('option_count', option_count)
+    option_count_values = list(set(ds['option_count']))
+
+    ds_list = []
+    for option_count in option_count_values:
+        ds_list.append(ds.filter(lambda sample: sample['option_count'] == option_count))
+    return ds_list
+
+
+def split_dataset_by_option_count_lan(ds, ds_name):
+    if ds_name in ['piqa', 'boolq', 'wg', 'swag', 'xnli', 'mmlu']:
+        return [ds]
+
+    if ds_name == 'hswag':
+        option_count = [len(endings) for endings in ds['endings']]
+    elif (ds_name == 'arc-challenge') or (ds_name == 'arc-easy'):
+        option_count = [5 for i in range(len(ds))]
+    elif ds_name == 'oqa':
+        option_count = [len(choices['label']) for choices in ds['choices']]
+    elif ds_name == 'bbh':
+        options = get_bbh_options(ds)
+        option_count = [len(sample_options) for sample_options in options]
+    else:
+        raise "Pass a supported dataset"
+
+    ds = ds.add_column('option_count', option_count)
+    option_count_values = list(set(ds['option_count']))
+
+    ds_list = []
+    for option_count in option_count_values:
+        ds_list.append(ds.filter(lambda sample: sample['option_count'] == option_count))
+    return ds_list

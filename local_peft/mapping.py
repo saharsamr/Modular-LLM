@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import torch
 
-from peft.tuners.xlora.model import XLoraModel
+from local_peft.tuners.xlora.model import XLoraModel
 
 from .config import PeftConfig
 from .mixed_model import PeftMixedModel

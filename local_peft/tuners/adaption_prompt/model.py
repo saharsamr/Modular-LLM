@@ -16,7 +16,7 @@ from typing import Dict, List
 
 import torch.nn as nn
 
-from peft.utils import _freeze_adapter, _get_submodules
+from local_peft.utils import _freeze_adapter, _get_submodules
 
 from .config import AdaptionPromptConfig, prepare_config
 from .layer import AdaptedAttention

@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from peft.tuners.lycoris_utils import LycorisLayer
+from local_peft.tuners.lycoris_utils import LycorisLayer
 
 
 class LoHaLayer(nn.Module, LycorisLayer):
