@@ -10,5 +10,5 @@ if __name__ == "__main__":
             folder_path=model_ckpt_path,
             repo_id="AliEdalat/experts",
             path_in_repo=model_ckpt_name,
-            token='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',
+            token='ACCESS_TOKEN',
         )
